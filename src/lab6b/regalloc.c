@@ -121,7 +121,7 @@ static Temp_tempList aliased(Temp_tempList tl, G_graph ig,
   return tempUnion(al, NULL);
 };
 
-struct RA_result RA_regAlloc(F_frame f, AS_instrList il) {
+struct RA_result RA_regAlloc(F_frame f, AS_instrList il, bool verbose) {
   //your code here.
   struct RA_result ret;
   bool ra_finished = FALSE;
@@ -135,9 +135,11 @@ struct RA_result RA_regAlloc(F_frame f, AS_instrList il) {
   int try = 0;
   while (++try < 7) {
     flow = FG_AssemFlowGraph(il, f);
-    G_show(stdout, G_nodes(flow), printInst);
     live = Live_liveness(flow);
-    G_show(stdout, G_nodes(live.graph), printTemp);
+    if (verbose) {
+      G_show(stdout, G_nodes(flow), printInst);
+      G_show(stdout, G_nodes(live.graph), printTemp);
+    }
     initial = F_initialRegisters(f);
     col = COL_color(live.graph, initial, F_registers(),
                     live.worklistMoves, live.moveList, live.spillCost);

@@ -4,6 +4,8 @@
 #include <string.h>
 
 
+extern int tigermain(int);
+
 int *initArray(int size, int init)
 {int i;
  int *a = (int *)malloc(size*sizeof(int));
