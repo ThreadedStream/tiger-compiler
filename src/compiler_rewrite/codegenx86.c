@@ -8,7 +8,7 @@
 #include "tree.h"
 #include "assem.h"
 #include "frame.h"
-#include "codegen.h"
+#include "codegenx86.h"
 #include "table.h"
 
 //Lab 6: your code here

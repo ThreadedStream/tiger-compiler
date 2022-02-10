@@ -21,7 +21,7 @@
 #include "printtree.h"
 //#include "escape.h" /* needed by escape analysis */
 #include "parse.h"
-#include "codegen.h"
+#include "codegenx86.h"
 #include "regalloc.h"
 #include "stdlib.h"
 

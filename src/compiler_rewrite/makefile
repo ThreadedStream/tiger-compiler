@@ -19,7 +19,7 @@ flowgraph.o: flowgraph.c flowgraph.h
 graph.o: graph.c graph.h
 	gcc -g -c graph.c
 
-codegen.o: codegen.c codegen.h
+codegen.o: codegenx86.c codegenx86.h
 	gcc -g -c codegen.c
 
 parse.o: parse.c errormsg.h util.h

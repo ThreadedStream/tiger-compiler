@@ -12,7 +12,6 @@ cmake_minimum_required(VERSION 3.19)
 add_executable(tiger
         lex.yy.c
         y.tab.c
-        ${HEADER_SOURCES}
         parse.c
         absyn.h
         absyn.c
@@ -20,8 +19,10 @@ add_executable(tiger
         assem.c
         canon.h
         canon.c
-        codegen.h
-        codegen.c
+#        codegenx86.h
+#        codegenx86.c
+        codegenx86_64.h
+        codegenx86_64.c
         color.h
         color.c
         env.h
@@ -61,6 +62,5 @@ add_executable(tiger
         types.c
         util.h
         util.c
-        x86frame.c
         x86-64frame.c
 )
