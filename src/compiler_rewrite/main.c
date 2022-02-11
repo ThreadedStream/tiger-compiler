@@ -169,7 +169,7 @@ static void assemble(const char *filename, const char *obj_name, const char *run
     assert(filename);
     assert(runtime_path);
     char command[256];
-    const char *gcc_compiler_flags = "-m32 -g";
+    const char *gcc_compiler_flags = "-m64 -g";
     sprintf(command, "%s -o %s %s %s %s", "gcc ", obj_name ? obj_name : "a.out", runtime_path, gcc_compiler_flags, filename);
     system(command);
 }

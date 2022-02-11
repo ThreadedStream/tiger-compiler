@@ -102,12 +102,13 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
     // first six arguments are passed in registers
     // the rest resides on the stack
     // TODO(threadedstream): handle on-stack residing arguments later
-    int offset = 8;
+    int offset = 16;
     int idx = 0;
     U_boolList formalEscape = formals;
     F_accessList formal = NULL;
     while (formalEscape) {
-        formal = F_AccessList(InReg(argregs[idx]), formal);
+        offset += 8;
+        formal = F_AccessList(InFrame(offset), formal);
         formalEscape = formalEscape->tail;
         idx++;
     }
@@ -118,6 +119,28 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
 
     frameStack = F_FrameList(f, frameStack);
     return f;
+//    F_frame f = checked_malloc(sizeof(*f));
+//    f->name = name;
+//
+//    // %ebp: old %ebp
+//    // %ebp + 4: static link
+//    // Arguments start from %ebp + 12
+//    // Local variables start from %ebp - 4 - 12 (callee save)
+//    int offset = 16;
+//    U_boolList formalEscape = formals;
+//    F_accessList formal = NULL;
+//    while (formalEscape) {
+//        offset += 8;
+//        formal = F_AccessList(InFrame(offset), formal);
+//        formalEscape = formalEscape->tail;
+//    }
+//
+//    f->formals = formal;
+//    f->locals = NULL;
+//    f->temp = Temp_empty();
+//
+//    frameStack = F_FrameList(f, frameStack);
+//    return f;
 }
 
 string F_string(Temp_label lab, string str) {
@@ -127,12 +150,9 @@ string F_string(Temp_label lab, string str) {
 }
 
 
-
 static Temp_tempList L(Temp_temp h, Temp_tempList t) {
     return Temp_TempList(h, t);
 }
-
-
 
 
 Temp_label F_name(F_frame f) {
@@ -201,7 +221,8 @@ AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
     AS_instr movInstr = AS_Move("movq `s0, `d0\n", L(F_FP(), NULL), L(F_SP(), NULL));
     AS_instr pushInstr = AS_Oper("pushq `s0\n", L(F_FP(), L(F_SP(), NULL)), L(F_FP(), NULL), NULL);
     AS_instrList appendedCalleeSave = appendCalleeSave(AS_InstrList(subInstr, body));
-    body =  AS_InstrList(pushInstr, AS_InstrList(movInstr, appendedCalleeSave));
+    body = AS_InstrList(AS_Label(String(inst_lbl), frame->name),
+                        AS_InstrList(pushInstr, AS_InstrList(movInstr, appendedCalleeSave)));
     return AS_Proc(String(buf), body, "# END\n");
 }
 
@@ -229,7 +250,6 @@ F_access F_allocLocal(F_frame f, bool escape) {
     f->locals = F_AccessList(l, f->locals);
     return l;
 }
-
 
 
 Temp_temp F_FP(void) {
@@ -344,6 +364,8 @@ Temp_map F_initialRegisters(F_frame f) {
     Temp_enter(m, r13, "%r13");
     Temp_enter(m, r14, "%r14");
     Temp_enter(m, r15, "%r15");
+
+    return m;
 }
 
 Temp_tempList F_registers(void) {
@@ -355,8 +377,8 @@ Temp_tempList F_registers(void) {
     Temp_tempList t_rbx = t_rdx->tail = Temp_TempList(rbx, NULL);
     Temp_tempList t_rsi = t_rbx->tail = Temp_TempList(rsi, NULL);
     Temp_tempList t_rdi = t_rsi->tail = Temp_TempList(rdi, NULL);
-    Temp_tempList t_r8  = t_rdi->tail = Temp_TempList(r8, NULL);
-    Temp_tempList t_r9  = t_r8->tail = Temp_TempList(r9, NULL);
+    Temp_tempList t_r8 = t_rdi->tail = Temp_TempList(r8, NULL);
+    Temp_tempList t_r9 = t_r8->tail = Temp_TempList(r9, NULL);
     Temp_tempList t_r10 = t_r9->tail = Temp_TempList(r10, NULL);
     Temp_tempList t_r11 = t_r10->tail = Temp_TempList(r11, NULL);
     Temp_tempList t_r12 = t_r11->tail = Temp_TempList(r12, NULL);
