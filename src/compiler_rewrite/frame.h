@@ -64,6 +64,7 @@ void F_initRegisters(void);
 Temp_map F_initialRegisters(F_frame f);
 Temp_tempList F_callersaves(void);
 Temp_tempList F_calleesaves(void);
+Temp_tempList F_argregisters(void);
 
 F_frame F_newFrame(Temp_label name, U_boolList formals);
 T_exp F_externalCall(string s, T_expList args);

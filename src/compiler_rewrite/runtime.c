@@ -50,7 +50,7 @@ void flush() {
 struct string consts[256];
 struct string empty = {0, ""};
 
-int main() {
+int main(int argc, const char* argv[]) {
     int i;
     for (i = 0; i < 256; i++) {
         consts[i].length = 1;

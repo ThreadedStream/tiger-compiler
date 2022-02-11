@@ -108,7 +108,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
     F_accessList formal = NULL;
     while (formalEscape) {
         offset += 8;
-        formal = F_AccessList(InFrame(offset), formal);
+        formal = F_AccessList(InReg(argregs[idx]), formal);
         formalEscape = formalEscape->tail;
         idx++;
     }
@@ -171,7 +171,7 @@ static AS_instrList appendCalleeSave(AS_instrList il) {
     AS_instrList ail = il;
     for (; calleesaves; calleesaves = calleesaves->tail) {
         ail = AS_InstrList(
-                AS_Oper("pushq `s0\n", L(F_SP(), NULL), L(calleesaves->head, NULL), NULL), ail);
+                AS_Oper("push `s0\n", L(F_SP(), NULL), L(calleesaves->head, NULL), NULL), ail);
 
     }
     return ail;
@@ -182,7 +182,7 @@ static AS_instrList restoreCalleeSave(AS_instrList il) {
     AS_instrList ail = NULL;
     for (; calleesaves; calleesaves = calleesaves->tail) {
         ail = AS_InstrList(
-                AS_Oper("popq `s0\n", L(F_SP(), NULL), L(calleesaves->head, NULL), NULL), ail);
+                AS_Oper("pop `s0\n", L(F_SP(), NULL), L(calleesaves->head, NULL), NULL), ail);
     }
     return AS_splice(ail, il);
 }
@@ -219,7 +219,7 @@ AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
     sprintf(inst_sub, "subq $%d, `s0\n", frame_size);
     AS_instr subInstr = AS_Oper(String(inst_sub), L(F_SP(), NULL), L(F_SP(), NULL), NULL);
     AS_instr movInstr = AS_Move("movq `s0, `d0\n", L(F_FP(), NULL), L(F_SP(), NULL));
-    AS_instr pushInstr = AS_Oper("pushq `s0\n", L(F_FP(), L(F_SP(), NULL)), L(F_FP(), NULL), NULL);
+    AS_instr pushInstr = AS_Oper("push `s0\n", L(F_FP(), L(F_SP(), NULL)), L(F_FP(), NULL), NULL);
     AS_instrList appendedCalleeSave = appendCalleeSave(AS_InstrList(subInstr, body));
     body = AS_InstrList(AS_Label(String(inst_lbl), frame->name),
                         AS_InstrList(pushInstr, AS_InstrList(movInstr, appendedCalleeSave)));
@@ -366,6 +366,21 @@ Temp_map F_initialRegisters(F_frame f) {
     Temp_enter(m, r15, "%r15");
 
     return m;
+}
+
+Temp_tempList F_argregisters(void) {
+    if (!fp) {
+        F_initRegisters();
+    }
+
+    Temp_tempList t_rdi = Temp_TempList(rdi, NULL);
+    Temp_tempList t_rsi = t_rdi->tail = Temp_TempList(rsi, NULL);
+    Temp_tempList t_rdx = t_rsi->tail = Temp_TempList(rdx, NULL);
+    Temp_tempList t_r10 = t_rdx->tail = Temp_TempList(r10, NULL);
+    Temp_tempList t_r8 = t_r10->tail = Temp_TempList(r8, NULL);
+    Temp_tempList t_r9 = t_r8->tail = Temp_TempList(r9, NULL);
+
+    return t_rdi;
 }
 
 Temp_tempList F_registers(void) {

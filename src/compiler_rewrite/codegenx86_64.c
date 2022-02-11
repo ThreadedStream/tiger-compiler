@@ -30,7 +30,7 @@ static Temp_temp munchExp(T_exp e);
 
 static void munchStm(T_stm s);
 
-static Temp_tempList munchArgs(int i, T_expList args);
+static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args);
 
 static void munchCallerSave();
 
@@ -216,7 +216,7 @@ static Temp_temp munchExp(T_exp e) {
             Temp_label lab = e->u.CALL.fun->u.NAME;
             T_expList args = e->u.CALL.args;
             Temp_temp t = Temp_newtemp();
-            Temp_tempList l = munchArgs(0, args);
+            Temp_tempList l = munchArgs(Temp_reverseList(F_argregisters()), args);
             Temp_tempList calldefs = F_callersaves();
             sprintf(inst, "call %s\n", Temp_labelstring(lab));
             emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
@@ -302,7 +302,7 @@ static void munchStm(T_stm s) {
                         Temp_label lab = src->u.CALL.fun->u.NAME;
                         T_expList args = src->u.CALL.args;
                         Temp_temp t = dst->u.TEMP;
-                        Temp_tempList l = munchArgs(0, args);
+                        Temp_tempList l = munchArgs(Temp_reverseList(F_argregisters()), args);
                         Temp_tempList calldefs = F_callersaves();
                         sprintf(inst, "call %s\n", Temp_labelstring(lab));
                         emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
@@ -359,7 +359,7 @@ static void munchStm(T_stm s) {
                     munchCallerSave();
                     Temp_label lab = call->u.CALL.fun->u.NAME;
                     T_expList args = call->u.CALL.args;
-                    Temp_tempList l = munchArgs(0, args);
+                    Temp_tempList l = munchArgs(Temp_reverseList(F_argregisters()), args);
                     Temp_tempList calldefs = F_callersaves();
                     sprintf(inst, "call %s\n", Temp_labelstring(lab));
                     emit(AS_Oper(inst, calldefs, l, NULL));
@@ -444,7 +444,7 @@ static void munchStm(T_stm s) {
 static void munchCallerSave() {
     Temp_tempList callerSaves = F_callersaves();
     for (; callerSaves; callerSaves = callerSaves->tail) {
-        emit(AS_Oper("pushq `s0\n", L(F_SP(), NULL), L(callerSaves->head, NULL), NULL));
+        emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(callerSaves->head, NULL), NULL));
     }
 }
 
@@ -460,19 +460,20 @@ static void munchCallerRestore(Temp_tempList tl) {
 
     Temp_tempList callerSaves = Temp_reverseList(F_callersaves());
     for (; callerSaves; callerSaves = callerSaves->tail) {
-        emit(AS_Oper("popq `d0\n", L(callerSaves->head, NULL), L(F_SP(), NULL), NULL));
+        emit(AS_Oper("pop `d0\n", L(callerSaves->head, NULL), L(F_SP(), NULL), NULL));
     }
 }
 
-static Temp_tempList munchArgs(int i, T_expList args) {
+static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args) {
     if (args == NULL) {
         return NULL;
     }
 
-    Temp_tempList old = munchArgs(i + 1, args->tail);
+    Temp_tempList old = munchArgs(argregs->tail, args->tail);
 
     Temp_temp r = munchExp(args->head);
-    emit(AS_Oper("pushq `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
+    emit(AS_Move("mov `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
+    //emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
 
     // No need to reserve values before calling in x86
     return Temp_TempList(r, old);
