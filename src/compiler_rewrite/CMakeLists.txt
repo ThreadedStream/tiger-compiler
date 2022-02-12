@@ -23,8 +23,8 @@ add_executable(tiger
         canon.c
         x86/codegenx86.h
         x86/codegenx86.c
-#        codegenx86_64.h
-#        codegenx86_64.c
+        amd64/codegenamd64.h
+        amd64/codegenamd64.c
         color.h
         color.c
         env.h
@@ -36,6 +36,7 @@ add_executable(tiger
         flowgraph.h
         flowgraph.c
         frame.h
+        frame.c
         graph.h
         graph.c
         liveness.h
@@ -64,7 +65,8 @@ add_executable(tiger
         types.c
         util.h
         util.c
-#        x86-64frame.c
+        amd64/amd64frame.c
+        amd64/amd64frame.h
         x86/x86frame.h
         x86/x86frame.c
 )

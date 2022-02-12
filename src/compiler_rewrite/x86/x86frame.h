@@ -26,6 +26,8 @@ AS_proc F_procEntryExit3_x86(F_frame frame, AS_instrList body);
 
 Temp_temp F_FP_x86(void);
 
+F_access F_allocLocal_x86(F_frame f, bool escape);
+
 Temp_temp F_SP_x86(void);
 
 Temp_temp F_ZERO_x86(void);
@@ -49,6 +51,10 @@ Temp_tempList F_callersaves_x86(void);
 Temp_tempList F_calleesaves_x86(void);
 
 string F_getlabel_x86(F_frame frame);
+
+F_accessList F_formals_x86(F_frame f);
+
+Temp_label F_name_x86(F_frame f);
 
 T_exp F_Exp_x86(F_access acc, T_exp framePtr);
 

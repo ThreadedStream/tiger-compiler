@@ -52,6 +52,17 @@ string F_getlabel_amd64(F_frame frame);
 
 T_exp F_Exp_amd64(F_access acc, T_exp framePtr);
 
+
+Temp_tempList F_argregisters_amd64(void);
+
+F_accessList F_formals_amd64(F_frame f);
+
+Temp_label F_name_amd64(F_frame f);
+
+F_access F_allocLocal_amd64(F_frame f, bool escape);
+
+F_accessList F_formals_amd64(F_frame f);
+
 T_exp F_ExpWithStaticLink_amd64(F_access acc, T_exp staticLink);
 
 T_exp F_FPExp_amd64(T_exp framePtr);

@@ -1,4 +1,3 @@
-
 /*Lab5: This header file is not complete. Please finish it with more definition.*/
 
 #ifndef FRAME_H
@@ -13,6 +12,8 @@ typedef struct F_frame_ *F_frame;
 typedef struct F_access_ *F_access;
 typedef struct F_accessList_ *F_accessList;
 typedef struct F_frameList_ *F_frameList;
+
+extern Temp_map F_tempMap;
 
 struct F_access_ {
     enum {
@@ -41,12 +42,7 @@ struct F_accessList_ {
     F_accessList tail;
 };
 
-int F_accessOffset(F_access a);
-
-Temp_temp F_accessReg(F_access a);
-
-F_accessList F_AccessList(F_access head, F_accessList tail);
-
+extern const int F_wordSize;
 
 /* declaration for fragments */
 typedef struct F_frag_ *F_frag;
@@ -66,9 +62,6 @@ struct F_frag_ {
     } u;
 };
 
-F_frag F_StringFrag(Temp_label label, string str);
-
-F_frag F_ProcFrag(T_stm body, F_frame frame);
 
 typedef struct F_fragList_ *F_fragList;
 struct F_fragList_ {
@@ -104,7 +97,11 @@ F_accessList F_formals(F_frame f);
 
 Temp_label F_name(F_frame f);
 
-extern const int F_wordSize;
+int F_accessOffset(F_access a);
+
+Temp_temp F_accessReg(F_access a);
+
+F_accessList F_AccessList(F_access head, F_accessList tail);
 
 Temp_temp F_FP(void);
 
@@ -116,9 +113,13 @@ Temp_temp F_RA(void);
 
 Temp_temp F_RV(void);
 
-Temp_temp F_EAX(void);
+Temp_temp F_AX(void);
 
-Temp_temp F_EDX(void);
+Temp_temp F_DX(void);
+
+F_frag F_StringFrag(Temp_label label, string str);
+
+F_frag F_ProcFrag(T_stm body, F_frame frame);
 
 void F_initRegisters(void);
 
