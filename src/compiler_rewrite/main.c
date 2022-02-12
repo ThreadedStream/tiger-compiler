@@ -24,19 +24,10 @@
 #include "codegenx86.h"
 #include "regalloc.h"
 #include "stdlib.h"
+#include "base.h"
 
 extern bool anyErrors;
 
-typedef struct Flags_ Flags;
-
-struct Flags_ {
-    bool f_print_tree;
-    bool f_major_s;
-    bool f_escape_analysis;
-    bool f_verbose;
-    const char *object_name;
-    const char* runtime_path;
-};
 
 /* print the assembly language instructions to filename.s */
 static void doProc(FILE *out, F_frame frame, T_stm body, bool verbose) {
@@ -141,30 +132,6 @@ static void doStr(FILE *out, string str, Temp_label label) {
     fprintf(out, "\n");
 }
 
-static int parse_flags(string *flags, Flags *fs) {
-    string f = NULL;
-    int i = 0;
-    while ((f = *(flags + i))) {
-        if (!strcmp(f, "-printtree")) {
-            fs->f_print_tree = TRUE;
-        } else if (!strcmp(f, "-S")) {
-            fs->f_major_s = TRUE;
-        } else if (!strcmp(f, "-escape")) {
-            fs->f_escape_analysis = TRUE;
-        } else if (!strcmp(f, "-verbose")) {
-            fs->f_verbose = TRUE;
-        } else if (!strcmp(f, "-o")) {
-            assert(*(flags + i + 1));
-            fs->object_name = strdup(*(flags + i + 1));
-        } else if (!strcmp(f, "-runtime")) {
-            assert(*(flags + i + 1));
-            fs->runtime_path = strdup(*(flags + i + 1));
-        }
-        i++;
-    }
-    return i - 1;
-}
-
 static void assemble(const char *filename, const char *obj_name, const char *runtime_path) {
     assert(filename);
     assert(runtime_path);
@@ -178,7 +145,7 @@ int main(int argc, char **argv) {
     A_exp absyn_root;
     S_table base_env, base_tenv;
     F_fragList frags, fl;
-    Flags fs = {};
+    B_Flags fs = {};
     char outfile[100];
     FILE *out = stdout;
 
@@ -187,7 +154,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    int last = parse_flags(argv, &fs);
+    int last = parseFlags(argv, &fs);
 
     absyn_root = parse(argv[last]);
     if (!absyn_root)

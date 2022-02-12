@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "util.h"
-#include "symbol.h"
-#include "absyn.h"
-#include "temp.h"
-#include "errormsg.h"
-#include "tree.h"
-#include "assem.h"
-#include "frame.h"
+#include "../util.h"
+#include "../symbol.h"
+#include "../absyn.h"
+#include "../temp.h"
+#include "../errormsg.h"
+#include "../tree.h"
+#include "../assem.h"
+#include "../frame.h"
 #include "codegenx86.h"
-#include "table.h"
+#include "../table.h"
 
 //Lab 6: your code here
 static AS_instrList iList = NULL, last = NULL;
@@ -346,7 +346,6 @@ static void munchStm(T_stm s) {
             // munchCallerRestore(l);
             // sprintf(inst2, "movl `s0, `d0\n");
             // emit(AS_Move(inst2, L(t, NULL), L(F_RV(), NULL)));
-            
           }
         } else {
           /* MOVE(TEMP(i),e2) */

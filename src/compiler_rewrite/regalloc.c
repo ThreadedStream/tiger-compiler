@@ -180,7 +180,7 @@ struct RA_result RA_regAlloc(F_frame f, AS_instrList il, bool verbose) {
         char buf[128];
         Temp_temp temp = tl->head;
         F_access local = (F_access)TAB_look(spilledLocal, temp);
-        sprintf(buf, "movq %d(`s0), `d0  # spilled\n", F_accessOffset(local));
+        sprintf(buf, "mov %d(`s0), `d0  # spilled\n", F_accessOffset(local));
         rewriteList = AS_InstrList(
             AS_Oper(String(buf), L(temp, NULL), L(F_FP(), NULL), NULL), rewriteList);
       }

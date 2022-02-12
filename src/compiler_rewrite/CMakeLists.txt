@@ -17,12 +17,14 @@ add_executable(tiger
         absyn.c
         assem.h
         assem.c
+        base.h
+        base.c
         canon.h
         canon.c
-#        codegenx86.h
-#        codegenx86.c
-        codegenx86_64.h
-        codegenx86_64.c
+        x86/codegenx86.h
+        x86/codegenx86.c
+#        codegenx86_64.h
+#        codegenx86_64.c
         color.h
         color.c
         env.h
@@ -62,6 +64,7 @@ add_executable(tiger
         types.c
         util.h
         util.c
-        x86-64frame.c
-#        x86frame.c
+#        x86-64frame.c
+        x86/x86frame.h
+        x86/x86frame.c
 )

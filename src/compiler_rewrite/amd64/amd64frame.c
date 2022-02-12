@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
-#include "symbol.h"
-#include "temp.h"
-#include "table.h"
-#include "tree.h"
-#include "frame.h"
-#include "errormsg.h"
+#include "../util.h"
+#include "../symbol.h"
+#include "../temp.h"
+#include "../table.h"
+#include "../tree.h"
+#include "../frame.h"
+#include "../errormsg.h"
 
 // Machine-related features
 
@@ -40,30 +40,6 @@ static Temp_tempList registers = NULL;
 static Temp_tempList specialregs = NULL;
 
 
-typedef struct F_frameList_ *F_frameList;
-
-struct F_access_ {
-    enum {
-        inFrame, inReg
-    } kind;
-    union {
-        int offset;
-        Temp_temp reg;
-    } u;
-};
-
-struct F_frame_ {
-    Temp_label name;
-    Temp_map temp;
-    F_accessList formals;
-    F_accessList locals;
-};
-
-struct F_frameList_ {
-    F_frame head;
-    F_frameList tail;
-};
-
 static F_frameList F_FrameList(F_frame head, F_frameList tail) {
     F_frameList l = checked_malloc(sizeof(*l));
     l->head = head;
@@ -87,30 +63,29 @@ static F_access InReg(Temp_temp reg) {
 
 static F_frameList frameStack = NULL;
 
-F_accessList F_AccessList(F_access head, F_accessList tail) {
+F_accessList F_AccessList_amd64(F_access head, F_accessList tail) {
     F_accessList l = checked_malloc(sizeof(*l));
     l->head = head;
     l->tail = tail;
     return l;
 }
 
-F_frame F_newFrame(Temp_label name, U_boolList formals) {
+F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
     F_frame f = checked_malloc(sizeof(*f));
     f->name = name;
-    Temp_temp argregs[] = {rdi, rsi, rdx, r10, r8, r9};
+    Temp_tempList argument_registers = F_argregisters();
 
     // first six arguments are passed in registers
     // the rest resides on the stack
     // TODO(threadedstream): handle on-stack residing arguments later
     int offset = 16;
-    int idx = 0;
     U_boolList formalEscape = formals;
     F_accessList formal = NULL;
     while (formalEscape) {
         offset += 8;
-        formal = F_AccessList(InReg(argregs[idx]), formal);
+        formal = F_AccessList(InReg(argument_registers->head), formal);
         formalEscape = formalEscape->tail;
-        idx++;
+        argument_registers = argument_registers->tail;
     }
 
     f->formals = formal;
@@ -143,7 +118,7 @@ F_frame F_newFrame(Temp_label name, U_boolList formals) {
 //    return f;
 }
 
-string F_string(Temp_label lab, string str) {
+string F_string_amd64(Temp_label lab, string str) {
     string buf = (string) checked_malloc(sizeof(char) * (strlen(str) + 100));
     sprintf(buf, "%s: .ascii \"%s\"\n", Temp_labelstring(lab), str);
     return buf;
@@ -155,11 +130,11 @@ static Temp_tempList L(Temp_temp h, Temp_tempList t) {
 }
 
 
-Temp_label F_name(F_frame f) {
+Temp_label F_name_amd64(F_frame f) {
     return f->name;
 }
 
-F_fragList F_FragList(F_frag head, F_fragList tail) {
+F_fragList F_FragList_amd64(F_frag head, F_fragList tail) {
     F_fragList l = checked_malloc(sizeof(*l));
     l->head = head;
     l->tail = tail;
@@ -187,14 +162,14 @@ static AS_instrList restoreCalleeSave(AS_instrList il) {
     return AS_splice(ail, il);
 }
 
-T_stm F_procEntryExit1(F_frame frame, T_stm stm) {
+T_stm F_procEntryExit1_amd64(F_frame frame, T_stm stm) {
     frameStack = frameStack->tail;
     return stm;
 }
 
 static Temp_tempList returnSink = NULL;
 
-AS_instrList F_procEntryExit2(AS_instrList body) {
+AS_instrList F_procEntryExit2_amd64(AS_instrList body) {
     Temp_tempList calleeSaves = F_calleesaves();
     if (!returnSink)
         returnSink = Temp_TempList(F_RA(),
@@ -211,7 +186,7 @@ AS_instrList F_procEntryExit2(AS_instrList body) {
     return AS_splice(body, AS_InstrList(addInstr, restoredCalleeSaves));
 }
 
-AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
+AS_proc F_procEntryExit3_amd64(F_frame frame, AS_instrList body) {
     char buf[1024], inst_lbl[128], inst_sub[128];
     int frame_size = 100;
     sprintf(buf, "# PROCEDURE %s\n", S_name(frame->name));
@@ -226,11 +201,11 @@ AS_proc F_procEntryExit3(F_frame frame, AS_instrList body) {
     return AS_Proc(String(buf), body, "# END\n");
 }
 
-F_accessList F_formals(F_frame f) {
+F_accessList F_formals_amd64(F_frame f) {
     return f->formals;
 }
 
-F_access F_allocLocal(F_frame f, bool escape) {
+F_access F_allocLocal_amd64(F_frame f, bool escape) {
     if (!escape) {
         F_access l = InReg(Temp_newtemp());
         f->locals = F_AccessList(l, f->locals);
@@ -252,14 +227,14 @@ F_access F_allocLocal(F_frame f, bool escape) {
 }
 
 
-Temp_temp F_FP(void) {
+Temp_temp F_FP_amd64(void) {
     if (fp == NULL) {
         F_initRegisters();
     }
     return fp;
 }
 
-Temp_temp F_SP(void) {
+Temp_temp F_SP_amd64(void) {
     if (sp == NULL) {
         F_initRegisters();
     }
@@ -267,7 +242,7 @@ Temp_temp F_SP(void) {
 }
 
 // Not available in x86-64 (yet present in ARM)
-Temp_temp F_ZERO(void) {
+Temp_temp F_ZERO_amd64(void) {
     if (zero == NULL) {
         F_initRegisters();
     }
@@ -275,35 +250,35 @@ Temp_temp F_ZERO(void) {
 }
 
 // Not available in x86-64
-Temp_temp F_RA(void) {
+Temp_temp F_RA_amd64(void) {
     if (ra == NULL) {
         F_initRegisters();
     }
     return ra;
 }
 
-Temp_temp F_RV(void) {
+Temp_temp F_RV_amd64(void) {
     if (rv == NULL) {
         F_initRegisters();
     }
     return rv;
 }
 
-Temp_temp F_EAX(void) {
+Temp_temp F_AX_amd64(void) {
     if (rax == NULL) {
         F_initRegisters();
     }
     return rax;
 }
 
-Temp_temp F_EDX(void) {
+Temp_temp F_DX_amd64(void) {
     if (rdx == NULL) {
         F_initRegisters();
     }
     return rdx;
 }
 
-void F_initRegisters(void) {
+void F_initRegisters_amd64(void) {
     fp = Temp_newtemp();
     sp = Temp_newtemp();
     zero = Temp_newtemp();
@@ -344,7 +319,7 @@ void F_initRegisters(void) {
                                               Temp_TempList(ra, NULL)));
 }
 
-Temp_map F_initialRegisters(F_frame f) {
+Temp_map F_initialRegisters_amd64(F_frame f) {
     Temp_map m = Temp_empty();
     Temp_enter(m, fp, "%rbp");
     Temp_enter(m, sp, "%rsp");
@@ -368,7 +343,7 @@ Temp_map F_initialRegisters(F_frame f) {
     return m;
 }
 
-Temp_tempList F_argregisters(void) {
+Temp_tempList F_argregisters_amd64(void) {
     if (!fp) {
         F_initRegisters();
     }
@@ -383,7 +358,7 @@ Temp_tempList F_argregisters(void) {
     return t_rdi;
 }
 
-Temp_tempList F_registers(void) {
+Temp_tempList F_registers_amd64(void) {
     if (!fp) {
         F_initRegisters();
     }
@@ -404,7 +379,7 @@ Temp_tempList F_registers(void) {
     return t_rcx;
 }
 
-Temp_tempList F_callersaves(void) {
+Temp_tempList F_callersaves_amd64(void) {
     if (!fp) {
         F_initRegisters();
     }
@@ -418,7 +393,7 @@ Temp_tempList F_callersaves(void) {
     return t_rdx;
 }
 
-Temp_tempList F_calleesaves(void) {
+Temp_tempList F_calleesaves_amd64(void) {
     if (!fp) {
         F_initRegisters();
     }
@@ -431,18 +406,18 @@ Temp_tempList F_calleesaves(void) {
     return t_rbx;
 }
 
-string F_getlabel(F_frame frame) {
+string F_getlabel_amd64(F_frame frame) {
     return Temp_labelstring(frame->name);
 }
 
-int F_accessOffset(F_access a) {
+int F_accessOffset_amd64(F_access a) {
     if (a->kind != inFrame) {
         EM_error(0, "Offset of a reg access is invalid");
     }
     return a->u.offset;
 }
 
-F_frag F_StringFrag(Temp_label label, string str) {
+F_frag F_StringFrag_amd64(Temp_label label, string str) {
     F_frag f = checked_malloc(sizeof(*f));
     f->kind = F_stringFrag;
     f->u.stringg.label = label;
@@ -451,7 +426,7 @@ F_frag F_StringFrag(Temp_label label, string str) {
 }
 
 
-Temp_temp F_accessReg(F_access a) {
+Temp_temp F_accessReg_amd64(F_access a) {
     if (a->kind != inReg) {
         EM_error(0, "Reg of a frame access is invalid");
     }
@@ -459,7 +434,7 @@ Temp_temp F_accessReg(F_access a) {
     return a->u.reg;
 }
 
-F_frag F_ProcFrag(T_stm body, F_frame frame) {
+F_frag F_ProcFrag_amd64(T_stm body, F_frame frame) {
     F_frag f = checked_malloc(sizeof(*f));
     f->kind = F_procFrag;
     f->u.proc.body = body;
@@ -468,37 +443,37 @@ F_frag F_ProcFrag(T_stm body, F_frame frame) {
 }
 
 
-T_exp F_Exp(F_access acc, T_exp framePtr) {
+T_exp F_Exp_amd64(F_access acc, T_exp framePtr) {
     if (acc->kind == inReg) {
         return T_Temp(F_accessReg(acc));
     }
     return T_Mem(T_Binop(T_plus, framePtr, T_Const(F_accessOffset(acc))));
 }
 
-T_exp F_ExpWithStaticLink(F_access acc, T_exp staticLink) {
+T_exp F_ExpWithStaticLink_amd64(F_access acc, T_exp staticLink) {
     if (acc->kind == inReg) {
         return T_Temp(F_accessReg(acc));
     }
     return T_Mem(T_Binop(T_plus, staticLink, T_Const(F_accessOffset(acc) - 8)));
 }
 
-T_exp F_FPExp(T_exp framePtr) {
+T_exp F_FPExp_amd64(T_exp framePtr) {
     return T_Mem(framePtr);
 }
 
-T_exp F_staticLinkExp(T_exp framePtr) {
+T_exp F_staticLinkExp_amd64(T_exp framePtr) {
     // static link at fp + 16
     return T_Binop(T_plus, framePtr, T_Const(2 * F_wordSize));
 }
 
-T_exp F_upperStaticLinkExp(T_exp staticLink) {
+T_exp F_upperStaticLinkExp_amd64(T_exp staticLink) {
     return T_Mem(staticLink);
 }
 
-T_exp F_staticLink2FP(T_exp staticLink) {
+T_exp F_staticLink2FP_amd64(T_exp staticLink) {
     return T_Binop(T_minus, T_Mem(staticLink), T_Const(2 * F_wordSize));
 }
 
-T_exp F_externalCall(string s, T_expList args) {
+T_exp F_externalCall_amd64(string s, T_expList args) {
     return T_Call(T_Name(Temp_namedlabel(s)), args);
 }

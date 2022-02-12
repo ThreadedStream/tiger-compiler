@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "util.h"
-#include "symbol.h"
-#include "absyn.h"
-#include "temp.h"
-#include "errormsg.h"
-#include "tree.h"
-#include "assem.h"
-#include "frame.h"
-#include "codegenx86_64.h"
-#include "table.h"
+#include "../util.h"
+#include "../symbol.h"
+#include "../absyn.h"
+#include "../temp.h"
+#include "../errormsg.h"
+#include "../tree.h"
+#include "../assem.h"
+#include "../frame.h"
+#include "codegenamd64.h"
+#include "../table.h"
 
 static AS_instrList iList = NULL, last = NULL;
 static bool lastIsLabel = FALSE;  // reserved for "nop"
@@ -36,7 +36,7 @@ static void munchCallerSave();
 
 static void munchCallerRestore(Temp_tempList tl);
 
-AS_instrList F_codegen(F_frame f, T_stmList stmList) {
+AS_instrList F_codegenamd64(F_frame f, T_stmList stmList) {
     AS_instrList list;
     T_stmList sl;
 
@@ -216,7 +216,7 @@ static Temp_temp munchExp(T_exp e) {
             Temp_label lab = e->u.CALL.fun->u.NAME;
             T_expList args = e->u.CALL.args;
             Temp_temp t = Temp_newtemp();
-            Temp_tempList l = munchArgs(Temp_reverseList(F_argregisters()), args);
+            Temp_tempList l = munchArgs(F_argregisters(), args);
             Temp_tempList calldefs = F_callersaves();
             sprintf(inst, "call %s\n", Temp_labelstring(lab));
             emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
@@ -302,7 +302,7 @@ static void munchStm(T_stm s) {
                         Temp_label lab = src->u.CALL.fun->u.NAME;
                         T_expList args = src->u.CALL.args;
                         Temp_temp t = dst->u.TEMP;
-                        Temp_tempList l = munchArgs(Temp_reverseList(F_argregisters()), args);
+                        Temp_tempList l = munchArgs(F_argregisters(), args);
                         Temp_tempList calldefs = F_callersaves();
                         sprintf(inst, "call %s\n", Temp_labelstring(lab));
                         emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
@@ -359,7 +359,7 @@ static void munchStm(T_stm s) {
                     munchCallerSave();
                     Temp_label lab = call->u.CALL.fun->u.NAME;
                     T_expList args = call->u.CALL.args;
-                    Temp_tempList l = munchArgs(Temp_reverseList(F_argregisters()), args);
+                    Temp_tempList l = munchArgs(F_argregisters(), args);
                     Temp_tempList calldefs = F_callersaves();
                     sprintf(inst, "call %s\n", Temp_labelstring(lab));
                     emit(AS_Oper(inst, calldefs, l, NULL));
@@ -455,8 +455,8 @@ static void munchCallerRestore(Temp_tempList tl) {
         ++restoreCount;
     }
 
-    sprintf(inst, "addq $%d, `s0\n", restoreCount * F_wordSize);
-    emit(AS_Oper(String(inst), L(F_SP(), NULL), L(F_SP(), NULL), NULL));
+//    sprintf(inst, "addq $%d, `s0\n", restoreCount * F_wordSize);
+//    emit(AS_Oper(String(inst), L(F_SP(), NULL), L(F_SP(), NULL), NULL));
 
     Temp_tempList callerSaves = Temp_reverseList(F_callersaves());
     for (; callerSaves; callerSaves = callerSaves->tail) {
