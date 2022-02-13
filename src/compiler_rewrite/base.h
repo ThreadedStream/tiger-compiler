@@ -10,7 +10,7 @@ extern int targetArch;
 enum {
     x86,
     AMD64,
-} B_targetArch;
+}; 
 
 
 struct B_Flags_ {
