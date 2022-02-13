@@ -23,7 +23,7 @@ static void emit(AS_instr inst) {
   }
 }
 
-Temp_tempList L(Temp_temp h, Temp_tempList t) {
+static Temp_tempList L(Temp_temp h, Temp_tempList t) {
   return Temp_TempList(h, t);
 }
 
@@ -33,7 +33,7 @@ static Temp_tempList munchArgs(int i, T_expList args);
 static void munchCallerSave();
 static void munchCallerRestore(Temp_tempList tl);
 
-AS_instrList F_codegen(F_frame f, T_stmList stmList) {
+AS_instrList F_codegen_x86(F_frame f, T_stmList stmList) {
   // Temp_temp temp = Temp_newtemp();
   // Temp_enter(F_tempMap, temp, "tmp");
   // return AS_InstrList(AS_Move("movl", Temp_TempList(temp, NULL), Temp_TempList(temp, NULL)), NULL);
@@ -203,11 +203,11 @@ static Temp_temp munchExp(T_exp e) {
         Temp_temp r = Temp_newtemp();
         Temp_temp r1 = munchExp(e1);
         Temp_temp r2 = munchExp(e2);
-        emit(AS_Move("movl `s0, `d0\n", L(F_EAX(), NULL), L(r1, NULL)));
-        emit(AS_Oper("movl $0, `d0\n", L(F_EDX(), NULL), NULL, NULL));
-        emit(AS_Oper("divl `s0\n", L(F_EAX(), L(F_EDX(), NULL)),
-              L(r2, L(F_EDX(), L(F_EAX(), NULL))), NULL));
-        emit(AS_Move("movl `s0, `d0\n", L(r, NULL), L(F_EAX(), NULL)));
+        emit(AS_Move("movl `s0, `d0\n", L(F_AX(), NULL), L(r1, NULL)));
+        emit(AS_Oper("movl $0, `d0\n", L(F_DX(), NULL), NULL, NULL));
+        emit(AS_Oper("divl `s0\n", L(F_AX(), L(F_DX(), NULL)),
+              L(r2, L(F_DX(), L(F_AX(), NULL))), NULL));
+        emit(AS_Move("movl `s0, `d0\n", L(r, NULL), L(F_AX(), NULL)));
         return r;
       } else {
         assert(0);

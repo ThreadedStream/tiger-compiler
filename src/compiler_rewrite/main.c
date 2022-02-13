@@ -21,7 +21,7 @@
 #include "printtree.h"
 //#include "escape.h" /* needed by escape analysis */
 #include "parse.h"
-#include "codegenx86.h"
+#include "codegen.h"
 #include "regalloc.h"
 #include "stdlib.h"
 #include "base.h"
@@ -135,9 +135,22 @@ static void doStr(FILE *out, string str, Temp_label label) {
 static void assemble(const char *filename, const char *obj_name, const char *runtime_path) {
     assert(filename);
     assert(runtime_path);
+    // setting gcc compiler by default
+    const char *compiler = "gcc";
     char command[256];
-    const char *gcc_compiler_flags = "-m64 -g";
-    sprintf(command, "%s -o %s %s %s %s", "gcc ", obj_name ? obj_name : "a.out", runtime_path, gcc_compiler_flags, filename);
+    char *gcc_compiler_flags;
+    switch (targetArch) {
+        case AMD64: {
+            gcc_compiler_flags = "-m64 -g -O2 -no-pie";
+            sprintf(command, "%s -o %s %s %s %s", compiler, obj_name ? obj_name : "a.out", gcc_compiler_flags, runtime_path,  filename);
+            break;
+        }
+        case x86: {
+            gcc_compiler_flags = "-m32 -g -O2";
+            sprintf(command, "%s -o %s %s %s %s", compiler, obj_name ? obj_name : "a.out", gcc_compiler_flags, runtime_path,  filename);
+            break;
+        }
+    }
     system(command);
 }
 

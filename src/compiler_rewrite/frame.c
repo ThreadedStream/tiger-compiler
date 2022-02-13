@@ -1,8 +1,13 @@
 #include "frame.h"
 #include "base.h"
-#include "x86/x86frame.h"
-#include "amd64/amd64frame.h"
 #include "util.h"
+#include "amd64/amd64frame.h"
+#include "x86/x86frame.h"
+
+
+Temp_map F_tempMap = NULL;
+int F_wordSize = 8; // amd64
+
 
 F_fragList F_FragList(F_frag head, F_fragList tail) {
     switch (targetArch) {
@@ -277,7 +282,7 @@ void F_initRegisters(void) {
         case AMD64:
             return F_initRegisters_amd64();
         default:
-            return NULL;
+            return;
     }
 }
 
@@ -317,7 +322,7 @@ Temp_tempList F_calleesaves(void) {
 Temp_tempList F_argregisters(void) {
     switch (targetArch) {
         case AMD64:
-            return F_argregisters();
+            return F_argregisters_amd64();
         default:
             return NULL;
     }

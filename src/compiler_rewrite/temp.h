@@ -1,10 +1,11 @@
-/*
- * temp.h 
- *
- */
 
 #ifndef TEMP_H
 #define TEMP_H
+
+#include "util.h"
+#include "symbol.h"
+
+#include <stdio.h>
 
 typedef struct Temp_temp_ *Temp_temp;
 Temp_temp Temp_newtemp(void);

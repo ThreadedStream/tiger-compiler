@@ -8,10 +8,12 @@
 #include "../table.h"
 #include "../tree.h"
 #include "../frame.h"
-#include "_x86frame.h"
+#include "x86frame.h"
 
 
 /*Lab5: Your implementation here.*/
+
+
 
 static F_frameList F_FrameList(F_frame head, F_frameList tail) {
     F_frameList l = checked_malloc(sizeof(*l));
@@ -228,9 +230,6 @@ AS_proc F_procEntryExit3_x86(F_frame frame, AS_instrList body) {
 }
 
 /* Machine-related Features */
-
-Temp_map F_tempMap = NULL;
-const int F_wordSize = 4; /* X86 */
 
 static Temp_temp eax = NULL;
 static Temp_temp ecx = NULL;

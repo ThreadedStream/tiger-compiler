@@ -14,6 +14,7 @@
 #include "liveness.h"
 #include "regalloc.h"
 #include "table.h"
+#include "base.h"
 
 static void printTemp(void* t) {
   Temp_map m = Temp_name();
@@ -191,7 +192,8 @@ struct RA_result RA_regAlloc(F_frame f, AS_instrList il, bool verbose) {
         char buf[128];
         Temp_temp temp = tl->head;
         F_access local = (F_access)TAB_look(spilledLocal, temp);
-        sprintf(buf, "movq `s0, %d(`s1)  # spilled\n", F_accessOffset(local));
+        char prefix = targetArch == x86 ? 'l' : targetArch == AMD64 ? 'q' : 'q';
+        sprintf(buf, "mov%c `s0, %d(`s1)  # spilled\n", prefix, F_accessOffset(local));
         rewriteList = AS_InstrList(
             AS_Oper(String(buf), NULL, L(temp, L(F_FP(), NULL)), NULL), rewriteList);
       }

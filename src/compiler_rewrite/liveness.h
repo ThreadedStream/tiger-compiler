@@ -1,3 +1,5 @@
+#pragma once
+
 typedef struct Live_moveList_ *Live_moveList;
 struct Live_moveList_ {
 	G_node src, dst;

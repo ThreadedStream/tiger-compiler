@@ -1,7 +1,8 @@
 #include <string.h>
 #include "base.h"
-#include "util.h"
+#include "frame.h"
 
+int targetArch = AMD64;
 
 int parseFlags(string *flags, B_Flags *fs) {
     string f = NULL;
@@ -21,6 +22,18 @@ int parseFlags(string *flags, B_Flags *fs) {
         } else if (!strcmp(f, "-runtime")) {
             assert(*(flags + i + 1));
             fs->runtime_path = strdup(*(flags + i + 1));
+        } else if(!strcmp(f, "-arch")) {
+            assert(*(flags + i + 1));
+            const char *arch = *(flags + i + 1);
+            if (!strcmp(arch,"x86")) {
+                targetArch = x86;
+                F_wordSize = 4;
+            } else if (!strcmp(arch, "amd64")) {
+                targetArch = AMD64;
+                F_wordSize = 8;
+            } else {
+                F_wordSize = 8;
+            }
         }
         i++;
     }

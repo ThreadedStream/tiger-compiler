@@ -21,6 +21,8 @@ add_executable(tiger
         base.c
         canon.h
         canon.c
+        codegen.h
+        codegen.c
         x86/codegenx86.h
         x86/codegenx86.c
         amd64/codegenamd64.h

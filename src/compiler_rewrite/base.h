@@ -1,13 +1,17 @@
-#pragma once
+#ifndef BASE_H
+#define BASE_H
+
+#include "util.h"
 
 typedef struct B_Flags_ B_Flags;
+
+extern int targetArch;
 
 enum {
     x86,
     AMD64,
 } B_targetArch;
 
-extern int targetArch;
 
 struct B_Flags_ {
     bool f_print_tree;
@@ -20,3 +24,5 @@ struct B_Flags_ {
 
 
 int parseFlags(string *flags, B_Flags *fs);
+
+#endif

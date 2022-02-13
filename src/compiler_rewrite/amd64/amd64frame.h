@@ -1,4 +1,7 @@
-#pragma once
+#ifndef AMD64FRAME_H
+#define AMD64FRAME_H
+
+#include "../frame.h"
 
 F_frame F_newFrame_amd64(Temp_label name, U_boolList formals);
 
@@ -74,3 +77,5 @@ T_exp F_upperStaticLinkExp_amd64(T_exp staticLink);
 T_exp F_staticLink2FP_amd64(T_exp staticLink);
 
 T_exp F_externalCall_amd64(string s, T_expList args);
+
+#endif

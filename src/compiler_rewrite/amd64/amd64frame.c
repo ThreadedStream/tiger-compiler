@@ -4,17 +4,17 @@
 
 #include "../util.h"
 #include "../symbol.h"
-#include "../temp.h"
 #include "../table.h"
 #include "../tree.h"
-#include "../frame.h"
 #include "../errormsg.h"
+
+#include "amd64frame.h"
 
 // Machine-related features
 
-Temp_map F_tempMap = NULL;
-const int F_wordSize = 8; // x86-64
 
+
+static Temp_tempList argumentRegisters = NULL;
 static Temp_temp rax = NULL;
 static Temp_temp rcx = NULL;
 static Temp_temp rdx = NULL;
@@ -73,7 +73,7 @@ F_accessList F_AccessList_amd64(F_access head, F_accessList tail) {
 F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
     F_frame f = checked_malloc(sizeof(*f));
     f->name = name;
-    Temp_tempList argument_registers = F_argregisters();
+    Temp_tempList argument_registers = F_argregisters_amd64();
 
     // first six arguments are passed in registers
     // the rest resides on the stack
@@ -129,6 +129,9 @@ static Temp_tempList L(Temp_temp h, Temp_tempList t) {
     return Temp_TempList(h, t);
 }
 
+F_frag F_newProcFrag_amd64(T_stm body, F_frame frame) {
+    return F_ProcFrag(body, frame);
+}
 
 Temp_label F_name_amd64(F_frame f) {
     return f->name;
@@ -241,7 +244,7 @@ Temp_temp F_SP_amd64(void) {
     return sp;
 }
 
-// Not available in x86-64 (yet present in ARM)
+// Not available in amd64 (yet present in ARM)
 Temp_temp F_ZERO_amd64(void) {
     if (zero == NULL) {
         F_initRegisters();
@@ -249,7 +252,7 @@ Temp_temp F_ZERO_amd64(void) {
     return zero;
 }
 
-// Not available in x86-64
+// Not available in amd64
 Temp_temp F_RA_amd64(void) {
     if (ra == NULL) {
         F_initRegisters();
@@ -346,16 +349,19 @@ Temp_map F_initialRegisters_amd64(F_frame f) {
 Temp_tempList F_argregisters_amd64(void) {
     if (!fp) {
         F_initRegisters();
+        if (argumentRegisters) {
+            return argumentRegisters;
+        }
     }
 
-    Temp_tempList t_rdi = Temp_TempList(rdi, NULL);
-    Temp_tempList t_rsi = t_rdi->tail = Temp_TempList(rsi, NULL);
+    argumentRegisters = Temp_TempList(rdi, NULL);
+    Temp_tempList t_rsi = argumentRegisters->tail = Temp_TempList(rsi, NULL);
     Temp_tempList t_rdx = t_rsi->tail = Temp_TempList(rdx, NULL);
     Temp_tempList t_r10 = t_rdx->tail = Temp_TempList(r10, NULL);
     Temp_tempList t_r8 = t_r10->tail = Temp_TempList(r8, NULL);
     Temp_tempList t_r9 = t_r8->tail = Temp_TempList(r9, NULL);
 
-    return t_rdi;
+    return argumentRegisters;
 }
 
 Temp_tempList F_registers_amd64(void) {

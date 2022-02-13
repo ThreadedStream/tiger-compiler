@@ -42,7 +42,7 @@ struct F_accessList_ {
     F_accessList tail;
 };
 
-extern const int F_wordSize;
+extern int F_wordSize;
 
 /* declaration for fragments */
 typedef struct F_frag_ *F_frag;
