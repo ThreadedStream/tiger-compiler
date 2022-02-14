@@ -5,7 +5,7 @@ let
 
     type intArray = array of int
 
-    var list := intArray [N] of 0
+    var list := intArray [N] of 1
     function nop() =(print(""))
     function init() =
     (
@@ -31,4 +31,9 @@ let
     )
  in try()
 end
+
+/*     movq 16(%rbp), %r15 */
+/*     movq -56(%r15), %r15 */
+
+/* 0x5655a1a0 */
 	

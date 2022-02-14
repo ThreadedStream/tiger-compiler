@@ -78,7 +78,7 @@ F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
     // first six arguments are passed in registers
     // the rest resides on the stack
     // TODO(threadedstream): handle on-stack residing arguments later
-    int offset = 16;
+    int offset = 8;
     U_boolList formalEscape = formals;
     F_accessList formal = NULL;
     while (formalEscape) {

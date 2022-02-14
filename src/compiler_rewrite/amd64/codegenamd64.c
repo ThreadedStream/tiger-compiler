@@ -155,9 +155,9 @@ static Temp_temp munchExp(T_exp e) {
                 Temp_temp r = Temp_newtemp();
                 Temp_temp r1 = munchExp(e1);
                 Temp_temp r2 = munchExp(e2);
-                sprintf(inst, "movl `s0, `d0\n");
+                sprintf(inst, "movq `s0, `d0\n");
                 emit(AS_Move(inst, L(r, NULL), L(r1, NULL)));
-                sprintf(inst2, "subl `s0, `d0\n");
+                sprintf(inst2, "subq `s0, `d0\n");
                 emit(AS_Oper(inst2, L(r, NULL), L(r2, L(r, NULL)), NULL));
                 return r;
             } else if (e->u.BINOP.op == T_mul) {
@@ -470,7 +470,7 @@ static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args) {
     Temp_tempList old = munchArgs(argregs->tail, args->tail);
 
     Temp_temp r = munchExp(args->head);
-    emit(AS_Move("mov `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
+    emit(AS_Move("movq `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
     //emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
 
     // No need to reserve values before calling in x86
