@@ -117,6 +117,8 @@ Temp_temp F_AX(void);
 
 Temp_temp F_DX(void);
 
+Temp_temp F_DI(void);
+
 F_frag F_StringFrag(Temp_label label, string str);
 
 F_frag F_ProcFrag(T_stm body, F_frame frame);

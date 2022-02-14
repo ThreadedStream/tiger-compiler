@@ -72,6 +72,7 @@ static Tr_access Tr_Access(Tr_level level, F_access access) {
   Tr_access a = checked_malloc(sizeof(*a));
   a->level = level;
   a->access = access;
+  return a;
 }
 
 Tr_accessList Tr_AccessList(Tr_access head, Tr_accessList tail) {
@@ -282,8 +283,8 @@ Tr_exp Tr_stringExp(string str) {
 }
 
 Tr_exp Tr_simpleVar(Tr_access a, Tr_level l) {
-  // static link is at fp + 8
-  T_exp staticLinkExp = F_staticLinkExp(T_Temp(F_FP()));
+  // static link is in rdi
+  T_exp staticLinkExp = T_Temp(F_DI());
 
   if (a->level == l) {
     return Tr_Ex(F_Exp(a->access, T_Temp(F_FP())));
@@ -542,7 +543,7 @@ Tr_exp Tr_callExp(bool isLibFunc,
     /* Finding static link iteratively */
     if (funclv->parent != current) {
       while (current) {
-        staticLink = T_Mem(staticLink);
+        //staticLink = T_Mem(staticLink);
         if (funclv->parent == current->parent) {
           break;
         }

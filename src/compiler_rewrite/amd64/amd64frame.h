@@ -39,6 +39,8 @@ Temp_temp F_RV_amd64(void);
 
 Temp_temp F_AX_amd64(void);
 
+Temp_temp F_DI_amd64(void);
+
 Temp_temp F_DX_amd64(void);
 
 void F_initRegisters_amd64(void);

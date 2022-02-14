@@ -274,6 +274,13 @@ Temp_temp F_AX_amd64(void) {
     return rax;
 }
 
+Temp_temp F_DI_amd64(void) {
+    if (rdi == NULL) {
+        F_initRegisters();
+    }
+    return rdi;
+}
+
 Temp_temp F_DX_amd64(void) {
     if (rdx == NULL) {
         F_initRegisters();
@@ -431,7 +438,6 @@ F_frag F_StringFrag_amd64(Temp_label label, string str) {
     return f;
 }
 
-
 Temp_temp F_accessReg_amd64(F_access a) {
     if (a->kind != inReg) {
         EM_error(0, "Reg of a frame access is invalid");
@@ -447,7 +453,6 @@ F_frag F_ProcFrag_amd64(T_stm body, F_frame frame) {
     f->u.proc.frame = frame;
     return f;
 }
-
 
 T_exp F_Exp_amd64(F_access acc, T_exp framePtr) {
     if (acc->kind == inReg) {
@@ -473,7 +478,7 @@ T_exp F_staticLinkExp_amd64(T_exp framePtr) {
 }
 
 T_exp F_upperStaticLinkExp_amd64(T_exp staticLink) {
-    return T_Mem(staticLink);
+    return staticLink;
 }
 
 T_exp F_staticLink2FP_amd64(T_exp staticLink) {

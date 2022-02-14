@@ -322,7 +322,6 @@ static void munchStm(T_stm s) {
                         // munchCallerRestore(l);
                         // sprintf(inst2, "movl `s0, `d0\n");
                         // emit(AS_Move(inst2, L(t, NULL), L(F_RV(), NULL)));
-
                     }
                 } else {
                     /* MOVE(TEMP(i),e2) */

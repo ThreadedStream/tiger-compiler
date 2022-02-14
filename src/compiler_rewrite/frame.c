@@ -242,6 +242,15 @@ Temp_temp F_AX(void) {
     }
 }
 
+Temp_temp F_DI(void) {
+    switch (targetArch) {
+        case AMD64:
+            return F_DI_amd64();
+        default:
+            return NULL;
+    }
+}
+
 Temp_temp F_DX(void) {
     switch (targetArch) {
         case x86:
