@@ -131,8 +131,8 @@ static struct expty transExp(Tr_level level, S_table venv, S_table tenv, A_exp a
       if (tl)
         EM_error(a->pos, "too few params in function %s", S_name(a->u.call.func));
 
-      bool isLibFunc = (S_look(base_venv, a->u.call.func) != NULL);
-      return expTy(Tr_callExp(isLibFunc, func->u.fun.level, level,
+      int isLibFunc = (S_look(base_venv, a->u.call.func) != NULL);
+      return expTy(Tr_callExp((bool) isLibFunc, func->u.fun.level, level,
                                 func->u.fun.label, explist), func->u.fun.result);
     }
     case A_opExp: {

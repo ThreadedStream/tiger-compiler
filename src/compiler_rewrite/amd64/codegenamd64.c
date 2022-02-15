@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include "../util.h"
 #include "../symbol.h"
@@ -6,18 +7,34 @@
 #include "../temp.h"
 #include "../errormsg.h"
 #include "../tree.h"
+#include "../env.h"
 #include "../table.h"
 #include "codegenamd64.h"
 
-static AS_instrList iList = NULL, last = NULL;
+
+static S_table base_venv = NULL;
 static bool lastIsLabel = FALSE;  // reserved for "nop"
+static AS_instrList iList = NULL, last = NULL;
+
 static void emit(AS_instr inst) {
-    lastIsLabel = (inst->kind == I_LABEL);
+    lastIsLabel = (bool) (inst->kind == I_LABEL);
     if (last != NULL) {
         last = last->tail = AS_InstrList(inst, NULL);
     } else {
         last = iList = AS_InstrList(inst, NULL);
     }
+}
+
+static bool isExternalCall(string name) {
+    string externalFuncNames[] = {"initArray", "stringEqual", "stringCompare", "allocRecord", "print", "printi"};
+    int size = sizeof(externalFuncNames) / sizeof(externalFuncNames[0]);
+    for (int i = 0; i < size; i++) {
+        if (!strcmp(name, externalFuncNames[i])) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
 }
 
 static Temp_tempList L(Temp_temp h, Temp_tempList t) {
@@ -28,16 +45,16 @@ static Temp_temp munchExp(T_exp e);
 
 static void munchStm(T_stm s);
 
-static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args);
+static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args, int idx, bool isLibFunc);
 
 static void munchCallerSave();
 
-static void munchCallerRestore(Temp_tempList tl);
+static void munchCallerRestore(Temp_tempList tl, bool isLibFunc);
 
 AS_instrList F_codegen_amd64(F_frame f, T_stmList stmList) {
     AS_instrList list;
     T_stmList sl;
-
+    base_venv = E_base_venv();
 
     for (sl = stmList; sl; sl = sl->tail) {
         munchStm(sl->head);
@@ -117,7 +134,7 @@ static Temp_temp munchExp(T_exp e) {
                 emit(AS_Oper(inst2, L(r, NULL), L(r, NULL), NULL));
                 return r;
             } else if (e->u.BINOP.op == T_plus
-                && e->u.BINOP.left->kind == T_CONST) {
+                       && e->u.BINOP.left->kind == T_CONST) {
                 /* BINOP(PLUS,CONST(i),e1) */
                 T_exp e1 = e->u.BINOP.right;
                 int i = e->u.BINOP.left->u.CONST;
@@ -128,7 +145,7 @@ static Temp_temp munchExp(T_exp e) {
                 emit(AS_Oper(inst2, L(r, NULL), L(r, NULL), NULL));
                 return r;
             } else if (e->u.BINOP.op == T_minus
-                && e->u.BINOP.right->kind == T_CONST) {
+                       && e->u.BINOP.right->kind == T_CONST) {
                 /* BINOP(MINUS,e1,CONST(i)) */
                 T_exp e1 = e->u.BINOP.left;
                 int i = e->u.BINOP.right->u.CONST;
@@ -212,13 +229,14 @@ static Temp_temp munchExp(T_exp e) {
             /* CALL(NAME(lab),args) */
             munchCallerSave();
             Temp_label lab = e->u.CALL.fun->u.NAME;
+            bool isLibFunc = isExternalCall(Temp_labelstring(lab));
             T_expList args = e->u.CALL.args;
             Temp_temp t = Temp_newtemp();
-            Temp_tempList l = munchArgs(F_argregisters(), args);
+            Temp_tempList l = munchArgs(F_argregisters(), args, 0, isLibFunc);
             Temp_tempList calldefs = F_callersaves();
             sprintf(inst, "call %s\n", Temp_labelstring(lab));
             emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
-            munchCallerRestore(l);
+            munchCallerRestore(l, isLibFunc);
             sprintf(inst2, "movq `s0, `d0\n");
             emit(AS_Move(inst2, L(t, NULL), L(F_RV(), NULL)));
             return t;
@@ -298,13 +316,14 @@ static void munchStm(T_stm s) {
                         /* MOVE(TEMP(t),CALL(NAME(lab),args)) */
                         munchCallerSave();
                         Temp_label lab = src->u.CALL.fun->u.NAME;
+                        bool isLibFunc = isExternalCall(Temp_labelstring(lab));
                         T_expList args = src->u.CALL.args;
                         Temp_temp t = dst->u.TEMP;
-                        Temp_tempList l = munchArgs(F_argregisters(), args);
+                        Temp_tempList l = munchArgs(F_argregisters(), args, 0, isLibFunc);
                         Temp_tempList calldefs = F_callersaves();
                         sprintf(inst, "call %s\n", Temp_labelstring(lab));
                         emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
-                        munchCallerRestore(l);
+                        munchCallerRestore(l, isLibFunc);
                         sprintf(inst2, "movq `s0, `d0\n");
                         emit(AS_Move(inst2, L(t, NULL), L(F_RV(), NULL)));
                     } else {
@@ -355,12 +374,13 @@ static void munchStm(T_stm s) {
                     /* EXP(CALL(NAME(lab),args)) */
                     munchCallerSave();
                     Temp_label lab = call->u.CALL.fun->u.NAME;
+                    bool isLibFunc = isExternalCall(Temp_labelstring(lab));
                     T_expList args = call->u.CALL.args;
-                    Temp_tempList l = munchArgs(F_argregisters(), args);
+                    Temp_tempList l = munchArgs(F_argregisters(), args, 0, isLibFunc);
                     Temp_tempList calldefs = F_callersaves();
                     sprintf(inst, "call %s\n", Temp_labelstring(lab));
                     emit(AS_Oper(inst, calldefs, l, NULL));
-                    munchCallerRestore(l);
+                    munchCallerRestore(l, isLibFunc);
                 } else {
                     /* EXP(CALL(e,args)) */
                     assert(0);
@@ -412,18 +432,38 @@ static void munchStm(T_stm s) {
             sprintf(inst, "cmpq `s1, `s0\n");
             emit(AS_Oper(inst, NULL, L(r3, L(r4, NULL)), NULL));
 
-            char* opcode = "";
+            char *opcode = "";
             switch (op) {
-                case T_eq:  opcode = "je";  break;
-                case T_ne:  opcode = "jne"; break;
-                case T_lt:  opcode = "jl";  break;
-                case T_gt:  opcode = "jg";  break;
-                case T_le:  opcode = "jle"; break;
-                case T_ge:  opcode = "jge"; break;
-                case T_ult: opcode = "jb";  break;
-                case T_ule: opcode = "jbe"; break;
-                case T_ugt: opcode = "ja";  break;
-                case T_uge: opcode = "jae"; break;
+                case T_eq:
+                    opcode = "je";
+                    break;
+                case T_ne:
+                    opcode = "jne";
+                    break;
+                case T_lt:
+                    opcode = "jl";
+                    break;
+                case T_gt:
+                    opcode = "jg";
+                    break;
+                case T_le:
+                    opcode = "jle";
+                    break;
+                case T_ge:
+                    opcode = "jge";
+                    break;
+                case T_ult:
+                    opcode = "jb";
+                    break;
+                case T_ule:
+                    opcode = "jbe";
+                    break;
+                case T_ugt:
+                    opcode = "ja";
+                    break;
+                case T_uge:
+                    opcode = "jae";
+                    break;
             }
             sprintf(inst2, "%s `j0\n", opcode);
             emit(AS_Oper(inst2, NULL, NULL, AS_Targets(Temp_LabelList(jt, NULL))));
@@ -445,15 +485,17 @@ static void munchCallerSave() {
     }
 }
 
-static void munchCallerRestore(Temp_tempList tl) {
+static void munchCallerRestore(Temp_tempList tl, bool isLibFunc) {
     int restoreCount = 0;
     char inst[128];
     for (; tl; tl = tl->tail) {
         ++restoreCount;
     }
 
-//    sprintf(inst, "addq $%d, `s0\n", restoreCount * F_wordSize);
-//    emit(AS_Oper(String(inst), L(F_SP(), NULL), L(F_SP(), NULL), NULL));
+    if (!isLibFunc) {
+        sprintf(inst, "addq $%d, `s0\n", 8);
+        emit(AS_Oper(String(inst), L(F_SP(), NULL), L(F_SP(), NULL), NULL));
+    }
 
     Temp_tempList callerSaves = Temp_reverseList(F_callersaves());
     for (; callerSaves; callerSaves = callerSaves->tail) {
@@ -461,17 +503,33 @@ static void munchCallerRestore(Temp_tempList tl) {
     }
 }
 
-static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args) {
+
+static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args, int idx, bool isLibFunc) {
     if (args == NULL) {
         return NULL;
     }
 
-    Temp_tempList old = munchArgs(argregs->tail, args->tail);
+    Temp_tempList old = munchArgs(idx == 0 && !isLibFunc ? argregs : argregs->tail, args->tail, idx + 1, isLibFunc);
 
     Temp_temp r = munchExp(args->head);
-    emit(AS_Move("movq `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
-    //emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
+    // TODO(threadedstream): avoid doing this in case if it's a lib function
+    if (idx == 0 && !isLibFunc) {
+        // handle stack arguments as well
+        emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
+    } else {
+        emit(AS_Move("movq `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
+    }
 
     // No need to reserve values before calling in x86
     return Temp_TempList(r, old);
+}
+
+void destroy() {
+    AS_instr currInstr = iList->head;
+
+    while (iList) {
+        free(currInstr);
+        free(iList);
+        iList = iList->tail;
+    }
 }

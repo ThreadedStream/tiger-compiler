@@ -465,7 +465,7 @@ T_exp F_ExpWithStaticLink_amd64(F_access acc, T_exp staticLink) {
     if (acc->kind == inReg) {
         return T_Temp(F_accessReg(acc));
     }
-    return T_Mem(T_Binop(T_plus, staticLink, T_Const(F_accessOffset(acc) - 8)));
+    return T_Mem(T_Binop(T_plus, staticLink, T_Const(F_accessOffset(acc) - 16)));
 }
 
 T_exp F_FPExp_amd64(T_exp framePtr) {
@@ -478,7 +478,7 @@ T_exp F_staticLinkExp_amd64(T_exp framePtr) {
 }
 
 T_exp F_upperStaticLinkExp_amd64(T_exp staticLink) {
-    return staticLink;
+    return T_Mem(staticLink);
 }
 
 T_exp F_staticLink2FP_amd64(T_exp staticLink) {

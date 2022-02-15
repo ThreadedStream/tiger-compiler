@@ -6,4 +6,6 @@
 
 AS_instrList F_codegen_amd64(F_frame f, T_stmList stmList);
 
+void destroy();
+
 #endif

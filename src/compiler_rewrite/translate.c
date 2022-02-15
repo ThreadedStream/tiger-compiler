@@ -283,8 +283,7 @@ Tr_exp Tr_stringExp(string str) {
 }
 
 Tr_exp Tr_simpleVar(Tr_access a, Tr_level l) {
-  // static link is in rdi
-  T_exp staticLinkExp = T_Temp(F_DI());
+  T_exp staticLinkExp = F_staticLinkExp(T_Temp(F_FP()));
 
   if (a->level == l) {
     return Tr_Ex(F_Exp(a->access, T_Temp(F_FP())));
@@ -501,6 +500,7 @@ Tr_exp Tr_recordExp(Tr_expList el, int fieldCount) {
               T_Temp(r)));
 }
 
+
 Tr_exp Tr_seqExp(Tr_expList el) {
   Tr_expList rel = NULL;
   for (; el; el = el->tail) {
@@ -522,6 +522,7 @@ Tr_exp Tr_letExp(Tr_expList el, Tr_exp body) {
   return Tr_Ex(exp);
 }
 
+// 0xffffd740 - 0xffffd738
 Tr_exp Tr_callExp(bool isLibFunc,
                   Tr_level funclv, Tr_level lv,
                   Temp_label name, Tr_expList rawel) {
@@ -543,7 +544,7 @@ Tr_exp Tr_callExp(bool isLibFunc,
     /* Finding static link iteratively */
     if (funclv->parent != current) {
       while (current) {
-        //staticLink = T_Mem(staticLink);
+        staticLink = T_Mem(staticLink);
         if (funclv->parent == current->parent) {
           break;
         }
