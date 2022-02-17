@@ -73,7 +73,22 @@ F_accessList F_AccessList_amd64(F_access head, F_accessList tail) {
 F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
     F_frame f = checked_malloc(sizeof(*f));
     f->name = name;
-    Temp_tempList argument_registers = F_argregisters_amd64();
+    f->frameSize = Temp_namedlabel(strcat(Temp_labelstring(name), "_framesize"));
+
+    T_exp fpExp = T_Temp(Temp_newtemp());
+    f->viewShift = T_Move(fpExp, F_staticLinkExp_amd64(fpExp));
+
+    T_exp dstExp;
+    T_exp fpExpCopy;
+    T_stm singleViewShift;
+    int argRegCount = Temp_listSize(F_argregisters());
+    int formalsSize = U_listSize(formals);
+
+    if (formalsSize > argRegCount) {
+        fpExpCopy = T_Temp(Temp_newtemp());
+        f->viewShift = T_Seq(f->viewShift, T_Move(fpExpCopy, F_staticLinkExp_amd64(fpExp)));
+    }
+
 
 
     // first six arguments are passed in registers

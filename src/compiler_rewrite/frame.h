@@ -30,7 +30,15 @@ struct F_frame_ {
     Temp_map temp;
     F_accessList formals;
     F_accessList locals;
+    Temp_label frameSize;
+    T_stm viewShift;
+    T_stm saveCalleeSaves;
+    T_stm restoreCalleeSaves;
+    int localCount;
+    int maxOutgoingArgs;
 };
+
+
 
 struct F_frameList_ {
     F_frame head;
