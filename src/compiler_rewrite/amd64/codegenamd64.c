@@ -52,6 +52,7 @@ static void munchCallerSave();
 static void munchCallerRestore(Temp_tempList tl, bool isLibFunc);
 
 AS_instrList F_codegen_amd64(F_frame f, T_stmList stmList) {
+    puts(Temp_labelstring(F_name(f)));
     AS_instrList list;
     T_stmList sl;
     base_venv = E_base_venv();
@@ -63,6 +64,7 @@ AS_instrList F_codegen_amd64(F_frame f, T_stmList stmList) {
     if (last && last->head->kind == I_LABEL) {
         emit(AS_Oper("nop\n", NULL, NULL, NULL));
     }
+
     list = iList;
     iList = last = NULL;
     return list;
@@ -232,6 +234,13 @@ static Temp_temp munchExp(T_exp e) {
             bool isLibFunc = isExternalCall(Temp_labelstring(lab));
             T_expList args = e->u.CALL.args;
             Temp_temp t = Temp_newtemp();
+            // push static link right away, as it complicates the matters quite a bit if handled
+            // in munchArgs
+            if (!isLibFunc) {
+                Temp_temp r = munchExp(args->head);
+                emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
+                args = args->tail;
+            }
             Temp_tempList l = munchArgs(F_argregisters(), args, 0, isLibFunc);
             Temp_tempList calldefs = F_callersaves();
             sprintf(inst, "call %s\n", Temp_labelstring(lab));
@@ -319,7 +328,12 @@ static void munchStm(T_stm s) {
                         bool isLibFunc = isExternalCall(Temp_labelstring(lab));
                         T_expList args = src->u.CALL.args;
                         Temp_temp t = dst->u.TEMP;
-                        Temp_tempList l = munchArgs(F_argregisters(), args, 0, isLibFunc);
+                        if (!isLibFunc) {
+                            Temp_temp r = munchExp(args->head);
+                            emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
+                            args = args->tail;
+                        }
+                        Temp_tempList l = munchArgs(F_argregisters(),T_reverseList(args), 0, isLibFunc);
                         Temp_tempList calldefs = F_callersaves();
                         sprintf(inst, "call %s\n", Temp_labelstring(lab));
                         emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
@@ -376,6 +390,11 @@ static void munchStm(T_stm s) {
                     Temp_label lab = call->u.CALL.fun->u.NAME;
                     bool isLibFunc = isExternalCall(Temp_labelstring(lab));
                     T_expList args = call->u.CALL.args;
+                    if (!isLibFunc) {
+                        Temp_temp r = munchExp(args->head);
+                        emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
+                        args = args->tail;
+                    }
                     Temp_tempList l = munchArgs(F_argregisters(), args, 0, isLibFunc);
                     Temp_tempList calldefs = F_callersaves();
                     sprintf(inst, "call %s\n", Temp_labelstring(lab));
@@ -509,20 +528,17 @@ static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args, int idx, b
         return NULL;
     }
 
-    Temp_tempList old = munchArgs(idx == 0 && !isLibFunc ? argregs : argregs->tail, args->tail, idx + 1, isLibFunc);
+    Temp_tempList old = munchArgs(argregs->tail, args->tail, idx + 1, isLibFunc);
 
     Temp_temp r = munchExp(args->head);
     // TODO(threadedstream): avoid doing this in case if it's a lib function
-    if (idx == 0 && !isLibFunc) {
-        // handle stack arguments as well
-        emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
-    } else {
-        emit(AS_Move("movq `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
-    }
+    emit(AS_Move("movq `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
 
     // No need to reserve values before calling in x86
     return Temp_TempList(r, old);
 }
+
+static Temp_tempList munchArgs2()
 
 void destroy() {
     AS_instr currInstr = iList->head;

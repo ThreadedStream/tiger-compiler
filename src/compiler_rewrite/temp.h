@@ -41,5 +41,6 @@ void Temp_enterPtr(Temp_map m, Temp_temp t, void *ptr);
 void* Temp_lookPtr(Temp_map m, Temp_temp t);
 
 Temp_map Temp_name(void);
+int Temp_listSize(Temp_tempList l);
 
 #endif

@@ -75,6 +75,7 @@ F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
     f->name = name;
     Temp_tempList argument_registers = F_argregisters_amd64();
 
+
     // first six arguments are passed in registers
     // the rest resides on the stack
     // TODO(threadedstream): handle on-stack residing arguments later

@@ -239,3 +239,11 @@ void Temp_dumpMap(FILE *out, Temp_map m) {
         Temp_dumpMap(out, m->under);
     }
 }
+
+int Temp_listSize(Temp_tempList l) {
+    int i = 0;
+    for (; l; l = l->tail) {
+        i++;
+    }
+    return i;
+}

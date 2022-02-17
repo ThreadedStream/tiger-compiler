@@ -176,3 +176,14 @@ T_relOp T_commute(T_relOp r) {
 }
 
 
+T_expList T_reverseList(T_expList l) {
+    if (!l) {
+        return l;
+    }
+
+    T_expList tl = NULL;
+    for (; l; l = l->tail) {
+        tl = T_ExpList(l->head, tl);
+    }
+    return tl;
+}
