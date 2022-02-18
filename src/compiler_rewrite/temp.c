@@ -247,3 +247,9 @@ int Temp_listSize(Temp_tempList l) {
     }
     return i;
 }
+
+Temp_temp Temp_nth(Temp_tempList ts, int n) {
+    int i = 0;
+    for (; ts, i != n; ts = ts->tail, i++);
+    return ts->head;
+}

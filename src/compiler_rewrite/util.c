@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "util.h"
 
 void *checked_malloc(int len) {
@@ -35,4 +36,13 @@ int U_listSize(U_boolList l) {
         i++;
     }
     return i;
+}
+
+string Sprintf(string format, ...) {
+    char *str = checked_malloc(512);
+    va_list args;
+    va_start(args, format);
+    vsprintf(str, format, args);
+    va_end(args);
+    return str;
 }

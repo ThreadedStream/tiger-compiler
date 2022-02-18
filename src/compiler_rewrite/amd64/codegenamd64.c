@@ -524,21 +524,55 @@ static void munchCallerRestore(Temp_tempList tl, bool isLibFunc) {
 
 
 static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args, int idx, bool isLibFunc) {
-    if (args == NULL) {
-        return NULL;
+    char instr[512];
+    Temp_tempList argList = NULL;
+    int argRegCount = Temp_listSize(F_argregisters());
+    int i = 0;
+
+    for (; args; args = args->tail) {
+        if (i < argRegCount) {
+            Temp_temp dstReg = Temp_nth(F_argregisters(), i);
+            if (args->head->kind == T_CONST) {
+                T_exp constExp = args->head;
+                sprintf(instr, "movq $%d, `d0", constExp->u.CONST);
+                emit(AS_Oper(String(instr), Temp_TempList(dstReg, NULL), NULL, NULL));
+            } else {
+                Temp_temp srcReg = munchExp(args->head);
+                emit(AS_Move("movq `s0, `d0", Temp_TempList(dstReg, NULL), Temp_TempList(srcReg, NULL)));
+            }
+            argList = Temp_TempList(dstReg, argList);
+        } else {
+            if (args->head->kind == T_CONST) {
+                T_exp constExp = args->head;
+                sprintf(instr, "movq $%d, ", constExp->u.CONST);
+                if (i != argRegCount) {
+                    strcat(instr, Sprintf("%d", (i - argRegCount) * F_wordSize));
+                }
+                strcat(instr, Sprintf("(%s)", Temp_look(Temp_empty(), F_SP())));
+                emit(AS_Oper(instr, NULL, Temp_TempList(F_RA(), NULL), NULL));
+            } else {
+                Temp_temp srcReg = munchExp(args->head);
+                sprintf(instr,"movq `s0, ");
+                if (i != argRegCount)
+                    strcat(instr, Sprintf("%d", (i - argRegCount) * F_wordSize));
+                strcat(instr, Sprintf("(%s)", Temp_look(Temp_empty(), F_SP())));
+                emit(AS_Oper(instr, NULL, Temp_TempList(srcReg,F_SP()), NULL))
+            }
+        }
     }
-
-    Temp_tempList old = munchArgs(argregs->tail, args->tail, idx + 1, isLibFunc);
-
-    Temp_temp r = munchExp(args->head);
-    // TODO(threadedstream): avoid doing this in case if it's a lib function
-    emit(AS_Move("movq `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
-
-    // No need to reserve values before calling in x86
-    return Temp_TempList(r, old);
+//    if (args == NULL) {
+//        return NULL;
+//    }
+//
+//    Temp_tempList old = munchArgs(argregs->tail, args->tail, idx + 1, isLibFunc);
+//
+//    Temp_temp r = munchExp(args->head);
+//    // TODO(threadedstream): avoid doing this in case if it's a lib function
+//    emit(AS_Move("movq `s0, `d0\n", L(argregs->head, NULL), L(r, NULL)));
+//
+//    // No need to reserve values before calling in x86
+//    return Temp_TempList(r, old);
 }
-
-static Temp_tempList munchArgs2()
 
 void destroy() {
     AS_instr currInstr = iList->head;

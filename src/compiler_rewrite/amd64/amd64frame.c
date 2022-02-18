@@ -72,6 +72,7 @@ F_accessList F_AccessList_amd64(F_access head, F_accessList tail) {
 
 F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
     F_frame f = checked_malloc(sizeof(*f));
+    int frameOffset = F_wordSize;
     f->name = name;
     f->frameSize = Temp_namedlabel(strcat(Temp_labelstring(name), "_framesize"));
 
@@ -89,41 +90,65 @@ F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
         f->viewShift = T_Seq(f->viewShift, T_Move(fpExpCopy, F_staticLinkExp_amd64(fpExp)));
     }
 
-
-
-    // first six arguments are passed in registers
-    // the rest resides on the stack
-    // TODO(threadedstream): handle on-stack residing arguments later
-    int offset = 8;
     U_boolList formalEscape = formals;
     F_accessList formal = NULL;
-    while (formalEscape) {
-        offset += 8;
-        formal = F_AccessList(InReg(argument_registers->head), formal);
-        formalEscape = formalEscape->tail;
-        argument_registers = argument_registers->tail;
+    for (int i = 0; i < formalsSize; i++) {
+        if (formalEscape) {
+            formal = F_AccessList(InFrame(frameOffset), NULL);
+            dstExp = T_Mem(T_Binop(T_minus, fpExp, T_Const((i + 1) * F_wordSize)));
+            frameOffset += F_wordSize;
+            f->localCount++;
+        } else {
+            Temp_temp reg = Temp_newtemp();
+            formal = F_AccessList(InReg(reg), NULL);
+            dstExp = T_Temp(reg);
+        }
+
+        if (i < argRegCount) {
+            singleViewShift = T_Move(dstExp, T_Temp(Temp_nth(F_argregisters(), i)));
+        } else {
+            singleViewShift = T_Move(dstExp, T_Mem(
+                    T_Binop(T_plus, fpExpCopy,
+                            T_Const((i - argRegCount + 1) * F_wordSize))
+            ));
+        }
+        f->viewShift = T_Seq(f->viewShift, singleViewShift);
     }
 
-    f->formals = formal;
-    f->locals = NULL;
-    f->temp = Temp_empty();
+    Temp_tempList calleeSaves = F_calleesaves();
+    Temp_temp storeReg;
+    T_stm singleSave;
+    T_stm singleRestore;
 
-    frameStack = F_FrameList(f, frameStack);
+    storeReg = Temp_newtemp();
+    f->saveCalleeSaves = T_Move(T_Temp(storeReg),
+                                T_Temp(calleeSaves->head));
+    f->restoreCalleeSaves = T_Move(T_Temp(calleeSaves->head),
+                                   T_Temp(storeReg));
+
+    calleeSaves = calleeSaves->tail;
+
+    for (; calleeSaves; calleeSaves = calleeSaves->tail) {
+        storeReg = Temp_newtemp();
+        singleSave = T_Move(T_Temp(storeReg), T_Temp(calleeSaves->head));
+        singleRestore = T_Move(T_Temp(calleeSaves->head), T_Temp(storeReg));
+        f->saveCalleeSaves = T_Seq(singleSave, f->saveCalleeSaves);
+        f->restoreCalleeSaves = T_Seq(singleRestore, f->restoreCalleeSaves);
+    }
+
     return f;
-//    F_frame f = checked_malloc(sizeof(*f));
-//    f->name = name;
-//
-//    // %ebp: old %ebp
-//    // %ebp + 4: static link
-//    // Arguments start from %ebp + 12
-//    // Local variables start from %ebp - 4 - 12 (callee save)
-//    int offset = 16;
+
+//    // first six arguments are passed in registers
+//    // the rest resides on the stack
+//    // TODO(threadedstream): handle on-stack residing arguments later
+//    int offset = 8;
 //    U_boolList formalEscape = formals;
 //    F_accessList formal = NULL;
 //    while (formalEscape) {
 //        offset += 8;
-//        formal = F_AccessList(InFrame(offset), formal);
+//        formal = F_AccessList(InReg(argumentRegisters->head), formal);
 //        formalEscape = formalEscape->tail;
+//        argument_registers = argument_registers->tail;
 //    }
 //
 //    f->formals = formal;
@@ -182,7 +207,13 @@ static AS_instrList restoreCalleeSave(AS_instrList il) {
 }
 
 T_stm F_procEntryExit1_amd64(F_frame frame, T_stm stm) {
-    frameStack = frameStack->tail;
+//    frameStack = frameStack->tail;
+//    return stm;
+
+    stm = T_Seq(frame->saveCalleeSaves, stm);
+    stm = T_Seq(frame->viewShift, stm);
+    stm = T_Seq(stm, frame->restoreCalleeSaves);
+
     return stm;
 }
 
@@ -193,31 +224,45 @@ AS_instrList F_procEntryExit2_amd64(AS_instrList body) {
     if (!returnSink)
         returnSink = Temp_TempList(F_RA(),
                                    Temp_TempList(F_SP(), calleeSaves));
-
-    char inst_add[128];
-    // may also make frame size variable
-    int frame_size = 100;
-    sprintf(inst_add, "addq $%d, `s0\n", frame_size);
-    AS_instr leaveInstr = AS_Oper("leave\n", L(F_SP(), L(F_FP(), NULL)), L(F_SP(), NULL), NULL);
-    AS_instr retInstr = AS_Oper("ret\n", NULL, returnSink, NULL);
-    AS_instr addInstr = AS_Oper(String(inst_add), L(F_SP(), NULL), L(F_SP(), NULL), NULL);
-    AS_instrList restoredCalleeSaves = restoreCalleeSave(AS_InstrList(leaveInstr, AS_InstrList(retInstr, NULL)));
-    return AS_splice(body, AS_InstrList(addInstr, restoredCalleeSaves));
+//
+//    char inst_add[128];
+//    // may also make frame size variable
+//    int frame_size = 100;
+//    sprintf(inst_add, "addq $%d, `s0\n", frame_size);
+//    AS_instr leaveInstr = AS_Oper("leave\n", L(F_SP(), L(F_FP(), NULL)), L(F_SP(), NULL), NULL);
+//    AS_instr retInstr = AS_Oper("ret\n", NULL, returnSink, NULL);
+//    AS_instr addInstr = AS_Oper(String(inst_add), L(F_SP(), NULL), L(F_SP(), NULL), NULL);
+//    AS_instrList restoredCalleeSaves = restoreCalleeSave(AS_InstrList(leaveInstr, AS_InstrList(retInstr, NULL)));
+//    return AS_splice(body, AS_InstrList(addInstr, restoredCalleeSaves));
+    AS_instr retSink = AS_Oper("", NULL, returnSink, NULL);
+    body = AS_InstrList(retSink, body);
+    return body;
 }
 
 AS_proc F_procEntryExit3_amd64(F_frame frame, AS_instrList body) {
-    char buf[1024], inst_lbl[128], inst_sub[128];
-    int frame_size = 100;
-    sprintf(buf, "# PROCEDURE %s\n", S_name(frame->name));
-    sprintf(inst_lbl, "%s:\n", S_name(frame->name));
-    sprintf(inst_sub, "subq $%d, `s0\n", frame_size);
-    AS_instr subInstr = AS_Oper(String(inst_sub), L(F_SP(), NULL), L(F_SP(), NULL), NULL);
-    AS_instr movInstr = AS_Move("movq `s0, `d0\n", L(F_FP(), NULL), L(F_SP(), NULL));
-    AS_instr pushInstr = AS_Oper("push `s0\n", L(F_FP(), L(F_SP(), NULL)), L(F_FP(), NULL), NULL);
-    AS_instrList appendedCalleeSave = appendCalleeSave(AS_InstrList(subInstr, body));
-    body = AS_InstrList(AS_Label(String(inst_lbl), frame->name),
-                        AS_InstrList(pushInstr, AS_InstrList(movInstr, appendedCalleeSave)));
-    return AS_Proc(String(buf), body, "# END\n");
+//    char buf[1024], inst_lbl[128], inst_sub[128];
+//    int frame_size = 100;
+//    sprintf(buf, "# PROCEDURE %s\n", S_name(frame->name));
+//    sprintf(inst_lbl, "%s:\n", S_name(frame->name));
+//    sprintf(inst_sub, "subq $%d, `s0\n", frame_size);
+//    AS_instr subInstr = AS_Oper(String(inst_sub), L(F_SP(), NULL), L(F_SP(), NULL), NULL);
+//    AS_instr movInstr = AS_Move("movq `s0, `d0\n", L(F_FP(), NULL), L(F_SP(), NULL));
+//    AS_instr pushInstr = AS_Oper("push `s0\n", L(F_FP(), L(F_SP(), NULL)), L(F_FP(), NULL), NULL);
+//    AS_instrList appendedCalleeSave = appendCalleeSave(AS_InstrList(subInstr, body));
+//    body = AS_InstrList(AS_Label(String(inst_lbl), frame->name),
+//                        AS_InstrList(pushInstr, AS_InstrList(movInstr, appendedCalleeSave)));
+//    return AS_Proc(String(buf), body, "# END\n");
+    char prologue[512], epilogue[512];
+    int fs = (frame->localCount + frame->maxOutgoingArgs) * F_wordSize;
+    sprintf(prologue, ".set %s, %d", Temp_labelstring(frame->frameSize), fs);
+    sprintf(prologue, "%s:\n", Temp_labelstring(frame->name));
+    if (fs != 0) {
+        sprintf(prologue, "subq $%d, %s\n", fs, Temp_look(Temp_empty(), F_SP()));
+        sprintf(epilogue, "addq $%d, %s\n", fs, Temp_look(Temp_empty(), F_SP()));
+    }
+
+    sprintf(epilogue, "retq\n");
+    return AS_Proc(String(prologue), body, String(epilogue));
 }
 
 F_accessList F_formals_amd64(F_frame f) {

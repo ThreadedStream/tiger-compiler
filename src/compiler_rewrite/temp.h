@@ -42,5 +42,6 @@ void* Temp_lookPtr(Temp_map m, Temp_temp t);
 
 Temp_map Temp_name(void);
 int Temp_listSize(Temp_tempList l);
+Temp_temp Temp_nth(Temp_tempList ts, int n);
 
 #endif
