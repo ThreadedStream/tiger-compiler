@@ -256,116 +256,159 @@ static Temp_temp munchExp(T_exp e) {
     }
 }
 
+static void munchMoveStm(T_stm) {
+    T_exp dst = s->u.MOVE.dst, src = s->u.MOVE.src;
+    if (dst->kind == T_MEM) {
+        if (dst->u.MEM->kind == T_BINOP
+            && dst->u.MEM->u.BINOP.op == T_plus
+            && dst->u.MEM->u.BINOP.right->kind == T_CONST) {
+
+            if (src->kind == T_CONST) {
+                /* MOVE(MEM(BINOP(PLUS,e1,CONST(i))),CONST(j)) */
+                T_exp e1 = dst->u.MEM->u.BINOP.left, e2 = src;
+                int i = dst->u.MEM->u.BINOP.right->u.CONST;
+                int j = src->u.CONST;
+                sprintf(inst,
+                        "movq $%d, %d(`s0)\n", j, i);
+
+                emit(AS_Oper(inst, NULL,
+
+                             L(munchExp(e1), NULL), NULL));
+            } else {
+/* MOVE(MEM(BINOP(PLUS,e1,CONST(i))),e2) */
+                T_exp e1 = dst->u.MEM->u.BINOP.left, e2 = src;
+                int i = dst->u.MEM->u.BINOP.right->u.CONST;
+                sprintf(inst,
+                        "movq `s1, %d(`s0)\n", i);
+
+                emit(AS_Oper(inst, NULL,
+
+                             L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
+            }
+        } else if (dst->u.MEM->kind == T_BINOP
+                   && dst->u.MEM->u.BINOP.op == T_plus
+                   && dst->u.MEM->u.BINOP.left->kind == T_CONST) {
+            if (src->kind == T_CONST) {
+                /* MOVE(MEM(BINOP(PLUS,CONST(i),e1)),CONST(j)) */
+                T_exp e1 = dst->u.MEM->u.BINOP.right, e2 = src;
+                int i = dst->u.MEM->u.BINOP.left->u.CONST;
+                int j = src->u.CONST;
+                sprintf(inst,
+                        "movq $%d, %d(`s0)\n", j, i);
+
+                emit(AS_Oper(inst, NULL,
+
+                             L(munchExp(e1), NULL), NULL));
+            } else {
+                /* MOVE(MEM(BINOP(PLUS,CONST(i),e1)),e2) */
+                // MEM[i + e1] = e2
+                T_exp e1 = dst->u.MEM->u.BINOP.right, e2 = src;
+                int i = dst->u.MEM->u.BINOP.left->u.CONST;
+                sprintf(inst,
+                        "movq `s1, %d(`s0)\n", i);
+
+                emit(AS_Oper(inst, NULL,
+
+                             L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
+            }
+        } else if (src->kind == T_MEM) {
+            /* MOVE(MEM(e1), MEM(e2)) */
+            T_exp e1 = dst->u.MEM, e2 = src->u.MEM;
+            Temp_temp r = Temp_newtemp();
+            sprintf(inst,
+                    "movq (`s0), `d0\n");
+
+            emit(AS_Oper(inst, L(r, NULL),
+
+                         L(munchExp(e2), NULL), NULL));
+            sprintf(inst2,
+                    "movq `s0, (`s1)\n");
+
+            emit(AS_Oper(inst2, NULL,
+                         L(r, L(munchExp(e1), NULL)), NULL));
+        } else if (dst->u.MEM->kind == T_CONST) {
+            /* MOVE(MEM(CONST(i)), e2) */
+            T_exp e2 = src;
+            int i = dst->u.MEM->u.CONST;
+            sprintf(inst,
+                    "movq `s0, %d\n", i);
+
+            emit(AS_Oper(inst, NULL,
+
+                         L(munchExp(e2), NULL), NULL));
+        } else {
+            /* MOVE(MEM(e1), e2) */
+            T_exp e1 = dst->u.MEM, e2 = src;
+            sprintf(inst,
+                    "movq `s1, (`s0)\n");
+
+            emit(AS_Oper(inst, NULL,
+
+                         L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
+        }
+    } else if (dst->kind == T_TEMP) {
+        if (src->kind == T_CALL) {
+            if (src->u.CALL.fun->kind == T_NAME) {
+                /* MOVE(TEMP(t),CALL(NAME(lab),args)) */
+                munchCallerSave();
+
+                Temp_label lab = src->u.CALL.fun->u.NAME;
+                bool isLibFunc = isExternalCall(Temp_labelstring(lab));
+                T_expList args = src->u.CALL.args;
+                Temp_temp t = dst->u.TEMP;
+                if (!isLibFunc) {
+                    Temp_temp r = munchExp(args->head);
+
+                    emit(AS_Oper(
+
+                            "push `s0\n",
+
+                            L(F_SP(), NULL),
+                            L(r, NULL), NULL));
+                    args = args->tail;
+                }
+                Temp_tempList l = munchArgs(F_argregisters(), T_reverseList(args), 0, isLibFunc);
+                Temp_tempList calldefs = F_callersaves();
+                sprintf(inst,
+                        "call %s\n",
+                        Temp_labelstring(lab)
+                );
+
+                emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
+                munchCallerRestore(l, isLibFunc
+                );
+                sprintf(inst2,
+                        "movq `s0, `d0\n");
+
+                emit(AS_Move(inst2, L(t, NULL),
+
+                             L(F_RV(), NULL)));
+            } else {
+/* MOVE(TEMP(t),CALL(e,args)) */
+                assert(0);
+            }
+        } else {
+            /* MOVE(TEMP(i),e2) */
+            T_exp e2 = src;
+            Temp_temp i = dst->u.TEMP;
+            sprintf(inst,
+                    "movq `s0, `d0\n");
+
+            emit(AS_Move(inst, L(i, NULL),
+
+                         L(munchExp(e2), NULL)));
+        } else {
+            assert(0);
+        }
+    }
+}
+
 static void munchStm(T_stm s) {
     char *inst = checked_malloc(sizeof(char) * 120);
     char *inst2 = checked_malloc(sizeof(char) * 120);
     char *inst3 = checked_malloc(sizeof(char) * 120);
     switch (s->kind) {
         case T_MOVE: {
-            T_exp dst = s->u.MOVE.dst, src = s->u.MOVE.src;
-            if (dst->kind == T_MEM) {
-                if (dst->u.MEM->kind == T_BINOP
-                    && dst->u.MEM->u.BINOP.op == T_plus
-                    && dst->u.MEM->u.BINOP.right->kind == T_CONST) {
-                    if (src->kind == T_CONST) {
-                        /* MOVE(MEM(BINOP(PLUS,e1,CONST(i))),CONST(j)) */
-                        T_exp e1 = dst->u.MEM->u.BINOP.left, e2 = src;
-                        int i = dst->u.MEM->u.BINOP.right->u.CONST;
-                        int j = src->u.CONST;
-                        sprintf(inst, "movq $%d, %d(`s0)\n", j, i);
-                        emit(AS_Oper(inst, NULL, L(munchExp(e1), NULL), NULL));
-                    } else {
-                        /* MOVE(MEM(BINOP(PLUS,e1,CONST(i))),e2) */
-                        T_exp e1 = dst->u.MEM->u.BINOP.left, e2 = src;
-                        int i = dst->u.MEM->u.BINOP.right->u.CONST;
-                        sprintf(inst, "movq `s1, %d(`s0)\n", i);
-                        emit(AS_Oper(inst, NULL, L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
-                    }
-                } else if (dst->u.MEM->kind == T_BINOP
-                           && dst->u.MEM->u.BINOP.op == T_plus
-                           && dst->u.MEM->u.BINOP.left->kind == T_CONST) {
-                    if (src->kind == T_CONST) {
-                        /* MOVE(MEM(BINOP(PLUS,CONST(i),e1)),CONST(j)) */
-                        T_exp e1 = dst->u.MEM->u.BINOP.right, e2 = src;
-                        int i = dst->u.MEM->u.BINOP.left->u.CONST;
-                        int j = src->u.CONST;
-                        sprintf(inst, "movq $%d, %d(`s0)\n", j, i);
-                        emit(AS_Oper(inst, NULL, L(munchExp(e1), NULL), NULL));
-                    } else {
-                        /* MOVE(MEM(BINOP(PLUS,CONST(i),e1)),e2) */
-                        // MEM[i + e1] = e2
-                        T_exp e1 = dst->u.MEM->u.BINOP.right, e2 = src;
-                        int i = dst->u.MEM->u.BINOP.left->u.CONST;
-                        sprintf(inst, "movq `s1, %d(`s0)\n", i);
-                        emit(AS_Oper(inst, NULL, L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
-                    }
-                } else if (src->kind == T_MEM) {
-                    /* MOVE(MEM(e1), MEM(e2)) */
-                    T_exp e1 = dst->u.MEM, e2 = src->u.MEM;
-                    Temp_temp r = Temp_newtemp();
-                    sprintf(inst, "movq (`s0), `d0\n");
-                    emit(AS_Oper(inst, L(r, NULL), L(munchExp(e2), NULL), NULL));
-                    sprintf(inst2, "movq `s0, (`s1)\n");
-                    emit(AS_Oper(inst2, NULL, L(r, L(munchExp(e1), NULL)), NULL));
-                } else if (dst->u.MEM->kind == T_CONST) {
-                    /* MOVE(MEM(CONST(i)), e2) */
-                    T_exp e2 = src;
-                    int i = dst->u.MEM->u.CONST;
-                    sprintf(inst, "movq `s0, %d\n", i);
-                    emit(AS_Oper(inst, NULL, L(munchExp(e2), NULL), NULL));
-                } else {
-                    /* MOVE(MEM(e1), e2) */
-                    T_exp e1 = dst->u.MEM, e2 = src;
-                    sprintf(inst, "movq `s1, (`s0)\n");
-                    emit(AS_Oper(inst, NULL, L(munchExp(e1), L(munchExp(e2), NULL)), NULL));
-                }
-            } else if (dst->kind == T_TEMP) {
-                if (src->kind == T_CALL) {
-                    if (src->u.CALL.fun->kind == T_NAME) {
-                        /* MOVE(TEMP(t),CALL(NAME(lab),args)) */
-                        munchCallerSave();
-                        Temp_label lab = src->u.CALL.fun->u.NAME;
-                        bool isLibFunc = isExternalCall(Temp_labelstring(lab));
-                        T_expList args = src->u.CALL.args;
-                        Temp_temp t = dst->u.TEMP;
-                        if (!isLibFunc) {
-                            Temp_temp r = munchExp(args->head);
-                            emit(AS_Oper("push `s0\n", L(F_SP(), NULL), L(r, NULL), NULL));
-                            args = args->tail;
-                        }
-                        Temp_tempList l = munchArgs(F_argregisters(),T_reverseList(args), 0, isLibFunc);
-                        Temp_tempList calldefs = F_callersaves();
-                        sprintf(inst, "call %s\n", Temp_labelstring(lab));
-                        emit(AS_Oper(inst, L(F_RV(), calldefs), l, NULL));
-                        munchCallerRestore(l, isLibFunc);
-                        sprintf(inst2, "movq `s0, `d0\n");
-                        emit(AS_Move(inst2, L(t, NULL), L(F_RV(), NULL)));
-                    } else {
-                        /* MOVE(TEMP(t),CALL(e,args)) */
-                        assert(0);
-                        // munchCallerSave();
-                        // T_exp e = src->u.CALL.fun;
-                        // T_expList args = src->u.CALL.args;
-                        // Temp_temp t = dst->u.TEMP;
-                        // Temp_temp r = munchExp(e);
-                        // Temp_tempList l = munchArgs(0, args);
-                        // Temp_tempList calldefs = F_callersaves();
-                        // sprintf(inst, "call *`s0\n");
-                        // emit(AS_Oper(inst, L(F_RV(), calldefs), L(r, l), NULL));
-                        // munchCallerRestore(l);
-                        // sprintf(inst2, "movl `s0, `d0\n");
-                        // emit(AS_Move(inst2, L(t, NULL), L(F_RV(), NULL)));
-                    }
-                } else {
-                    /* MOVE(TEMP(i),e2) */
-                    T_exp e2 = src;
-                    Temp_temp i = dst->u.TEMP;
-                    sprintf(inst, "movq `s0, `d0\n");
-                    emit(AS_Move(inst, L(i, NULL), L(munchExp(e2), NULL)));
-                }
-            } else {
-                assert(0);
-            }
             break;
         }
         case T_LABEL: {
@@ -552,14 +595,20 @@ static Temp_tempList munchArgs(Temp_tempList argregs, T_expList args, int idx, b
                 emit(AS_Oper(instr, NULL, Temp_TempList(F_RA(), NULL), NULL));
             } else {
                 Temp_temp srcReg = munchExp(args->head);
-                sprintf(instr,"movq `s0, ");
+                sprintf(instr, "movq `s0, ");
                 if (i != argRegCount)
                     strcat(instr, Sprintf("%d", (i - argRegCount) * F_wordSize));
                 strcat(instr, Sprintf("(%s)", Temp_look(Temp_empty(), F_SP())));
-                emit(AS_Oper(instr, NULL, Temp_TempList(srcReg,F_SP()), NULL))
+                emit(AS_Oper(String(instr), NULL, Temp_TempList(srcReg, Temp_TempList(F_SP(), NULL)), NULL));
             }
         }
+        ++i;
     }
+
+    if (i > argRegCount)
+        argList = Temp_TempList(F_SP(), argList);
+
+    return argList;
 //    if (args == NULL) {
 //        return NULL;
 //    }

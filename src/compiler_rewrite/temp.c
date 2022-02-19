@@ -47,12 +47,10 @@ Temp_temp Temp_newtemp(void) {
     return p;
 }
 
-
 struct Temp_map_ {
     TAB_table tab;
     Temp_map under;
 };
-
 
 Temp_map Temp_name(void) {
     static Temp_map m = NULL;
@@ -213,7 +211,7 @@ bool Temp_equal(Temp_tempList ta, Temp_tempList tb) {
         ++cb;
     }
 
-    return (ca == cb);
+    return (bool) (ca == cb);
 }
 
 bool Temp_inList(Temp_temp t, Temp_tempList tl) {

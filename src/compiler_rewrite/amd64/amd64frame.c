@@ -74,7 +74,7 @@ F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
     F_frame f = checked_malloc(sizeof(*f));
     int frameOffset = F_wordSize;
     f->name = name;
-    f->frameSize = Temp_namedlabel(strcat(Temp_labelstring(name), "_framesize"));
+    f->frameSize = Temp_namedlabel(Strcat(Temp_labelstring(name), "_framesize"));
 
     T_exp fpExp = T_Temp(Temp_newtemp());
     f->viewShift = T_Move(fpExp, F_staticLinkExp_amd64(fpExp));
@@ -94,7 +94,7 @@ F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
     F_accessList formal = NULL;
     for (int i = 0; i < formalsSize; i++) {
         if (formalEscape) {
-            formal = F_AccessList(InFrame(frameOffset), NULL);
+            formal = F_AccessList(InFrame(frameOffset), formal);
             dstExp = T_Mem(T_Binop(T_minus, fpExp, T_Const((i + 1) * F_wordSize)));
             frameOffset += F_wordSize;
             f->localCount++;
@@ -136,6 +136,9 @@ F_frame F_newFrame_amd64(Temp_label name, U_boolList formals) {
         f->restoreCalleeSaves = T_Seq(singleRestore, f->restoreCalleeSaves);
     }
 
+    f->formals = formal;
+    f->locals = NULL;
+    f->temp = Temp_empty();
     return f;
 
 //    // first six arguments are passed in registers

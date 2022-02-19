@@ -3,6 +3,7 @@
 
 typedef char *string;
 typedef char bool;
+typedef unsigned long u32;
 
 #define TRUE 1
 #define FALSE 0
@@ -10,6 +11,7 @@ typedef char bool;
 void *checked_malloc(int);
 string String(char *);
 string Sprintf(string format, ...);
+string Strcat(char* dest, string src);
 
 typedef struct U_boolList_ *U_boolList;
 struct U_boolList_ {bool head; U_boolList tail;};

@@ -38,6 +38,15 @@ int U_listSize(U_boolList l) {
     return i;
 }
 
+string Strcat(char *dest, string src) {
+    u32 destLen = strlen(dest);
+    u32 srcLen = strlen(src);
+    char *buffer = checked_malloc((int)(destLen + srcLen));
+    strcat(buffer, dest);
+    strcat(buffer, src);
+    return buffer;
+}
+
 string Sprintf(string format, ...) {
     char *str = checked_malloc(512);
     va_list args;
