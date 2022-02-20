@@ -72,4 +72,13 @@ struct AS_proc_ {
 
 AS_proc AS_Proc(string p, AS_instrList b, string e);
 
+typedef struct AS_memFetch_ *AS_memFetch;
+struct AS_memFetch_ {
+    string fetch;
+    Temp_tempList regs;
+};
+
+AS_memFetch AS_MemFetch(string fetch, Temp_tempList regs);
+
+
 #endif

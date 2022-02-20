@@ -127,6 +127,25 @@ Temp_tempList Temp_reverseList(Temp_tempList t) {
     return tl;
 }
 
+Temp_tempList Temp_splice(Temp_tempList dst, Temp_tempList src) {
+    if (src == NULL) {
+        return dst;
+    }
+    Temp_tempList tl;
+    for (tl = dst; tl->tail; tl = dst->tail);
+    tl->tail = src;
+    return dst;
+}
+
+//Temp_tempList Temp_append(Temp_tempList dst, Temp_temp src) {
+//    if (src == NULL) {
+//        return dst;
+//    }
+//    Temp_tempList tl;
+//    for (tl = dst; tl->tail; tl = dst->tail);
+//    tl->tail = src;
+//}
+
 Temp_tempList Temp_union(Temp_tempList ta, Temp_tempList tb) {
     Temp_temp t;
     Temp_tempList tl = NULL;

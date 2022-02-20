@@ -56,6 +56,14 @@ AS_instrList AS_InstrList(AS_instr head, AS_instrList tail) {
     return p;
 }
 
+AS_memFetch AS_MemFetch(string fetch, Temp_tempList regs) {
+    AS_memFetch memFetch = (AS_memFetch) checked_malloc(sizeof(*memFetch));
+    memFetch->fetch = fetch;
+    memFetch->regs = regs;
+    return memFetch;
+}
+
+
 /* put list b at the end of list a */
 AS_instrList AS_splice(AS_instrList a, AS_instrList b) {
     AS_instrList p;

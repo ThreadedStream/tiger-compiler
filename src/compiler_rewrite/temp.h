@@ -14,6 +14,9 @@ typedef struct Temp_tempList_ *Temp_tempList;
 struct Temp_tempList_ { Temp_temp head; Temp_tempList tail;};
 Temp_tempList Temp_TempList(Temp_temp h, Temp_tempList t);
 Temp_tempList Temp_reverseList(Temp_tempList t);
+Temp_tempList Temp_splice(Temp_tempList dst, Temp_tempList src);
+//Temp_tempList Temp_append(Temp_tempList dst, Temp_temp src);
+
 
 bool Temp_equal(Temp_tempList ta, Temp_tempList tb);
 Temp_tempList Temp_union(Temp_tempList ta, Temp_tempList tb);
